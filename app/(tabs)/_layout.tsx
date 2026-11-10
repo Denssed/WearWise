@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { Platform } from 'react-native';
 import { useWardrobe } from '../../src/context/WardrobeContext';
+import { SOFT_TACTILE } from '../../src/theme/softTactile';
 
 export default function TabsLayout() {
   const { garments } = useWardrobe();
@@ -14,19 +15,19 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#818CF8',
-        tabBarInactiveTintColor: '#94A3B8',
+        tabBarActiveTintColor: SOFT_TACTILE.colors.terracotta,
+        tabBarInactiveTintColor: SOFT_TACTILE.colors.textMuted,
         tabBarStyle: {
-          backgroundColor: '#0F172A',
-          borderTopColor: '#1E293B',
+          backgroundColor: SOFT_TACTILE.colors.card,
+          borderTopColor: SOFT_TACTILE.colors.border,
           borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 86 : 68,
+          height: Platform.OS === 'ios' ? 88 : 70,
           paddingTop: 8,
-          paddingBottom: Platform.OS === 'ios' ? 26 : 10,
+          paddingBottom: Platform.OS === 'ios' ? 26 : 12,
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontWeight: '700',
         },
       }}
     >
@@ -63,7 +64,7 @@ export default function TabsLayout() {
           title: 'Lavandería',
           tabBarBadge: dirtyCount > 0 ? dirtyCount : undefined,
           tabBarBadgeStyle: {
-            backgroundColor: '#EF4444',
+            backgroundColor: SOFT_TACTILE.colors.clayRed,
             color: '#FFFFFF',
             fontSize: 11,
             fontWeight: '700',

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWardrobe } from '../../src/context/WardrobeContext';
+import { SOFT_TACTILE } from '../../src/theme/softTactile';
 import { WASH_GROUP_INFO, WashCareGroup } from '../../src/types/wardrobe';
 
 const WASH_GROUPS_ORDER: WashCareGroup[] = ['whites', 'darks', 'colors', 'delicates'];
@@ -43,35 +44,34 @@ export default function LaundryScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.title}>Cesto de Lavandería Inteligente</Text>
+        <Text style={styles.title}>Cesto de Lavandería Orgánico</Text>
         <Text style={styles.subtitle}>
-          Control automático de qué ropa debes lavar hoy agrupada por tipo de cuidado
-          textil para no dañar tus prendas.
+          Tandas clasificadas automáticamente por cuidado textil para prolongar la vida de
+          tus prendas y ahorrar lavadas.
         </Text>
 
         {/* RESUMEN DE ESTADO */}
         <View style={styles.summaryRow}>
           <View style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: '#F87171' }]}>
+            <Text style={[styles.summaryNumber, { color: SOFT_TACTILE.colors.clayRed }]}>
               {dirtyGarments.length}
             </Text>
-            <Text style={styles.summaryLabel}>Urgentes por lavar</Text>
+            <Text style={styles.summaryLabel}>Para lavar hoy</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: '#FBBF24' }]}>
+            <Text style={[styles.summaryNumber, { color: SOFT_TACTILE.colors.ochre }]}>
               {almostDirtyGarments.length}
             </Text>
-            <Text style={styles.summaryLabel}>Con 1 puesta restante</Text>
+            <Text style={styles.summaryLabel}>Con 1 puesta libre</Text>
           </View>
           <View style={styles.summaryCard}>
-            <Text style={[styles.summaryNumber, { color: '#34D399' }]}>
+            <Text style={[styles.summaryNumber, { color: SOFT_TACTILE.colors.sage }]}>
               {garments.length - dirtyGarments.length}
             </Text>
-            <Text style={styles.summaryLabel}>Disponibles limpias</Text>
+            <Text style={styles.summaryLabel}>Frescas en armario</Text>
           </View>
         </View>
 
-        {/* TANDAS POR GRUPO DE LAVADO */}
         {WASH_GROUPS_ORDER.map((groupKey) => {
           const info = WASH_GROUP_INFO[groupKey];
           const urgentInGroup = dirtyGarments.filter(
@@ -88,7 +88,7 @@ export default function LaundryScreen() {
                   <View
                     style={[
                       styles.batchColorDot,
-                      { backgroundColor: info.color },
+                      { backgroundColor: SOFT_TACTILE.colors.terracotta },
                     ]}
                   />
                   <View style={{ flex: 1 }}>
@@ -105,11 +105,10 @@ export default function LaundryScreen() {
 
               {urgentInGroup.length === 0 && optionalInGroup.length === 0 ? (
                 <Text style={styles.emptyBatchText}>
-                  Todas las prendas de esta tanda están limpias y al 100%.
+                  Todas las prendas de esta tanda están limpias y frescas.
                 </Text>
               ) : (
                 <>
-                  {/* PRENDAS QUE YA ALCANZARON EL LÍMITE DE USOS */}
                   {urgentInGroup.map((item) => (
                     <View key={item.id} style={styles.laundryItemRow}>
                       <Image
@@ -133,7 +132,6 @@ export default function LaundryScreen() {
                     </View>
                   ))}
 
-                  {/* PRENDAS OPCIONALES (LES QUEDA 1 USO) PARA COMPLETAR CARGA */}
                   {optionalInGroup.length > 0 ? (
                     <View style={styles.optionalSection}>
                       <Text style={styles.optionalTitle}>
@@ -156,7 +154,7 @@ export default function LaundryScreen() {
                             onPress={() => washGarmentsByIds([item.id])}
                           >
                             <Text style={styles.optionalWashBtnText}>
-                              Reiniciar a 0
+                              Incluir y lavar
                             </Text>
                           </TouchableOpacity>
                         </View>
@@ -165,10 +163,7 @@ export default function LaundryScreen() {
                   ) : null}
 
                   <TouchableOpacity
-                    style={[
-                      styles.washBatchBtn,
-                      { backgroundColor: info.color },
-                    ]}
+                    style={styles.washBatchBtn}
                     onPress={() => washBatchByGroup(groupKey)}
                   >
                     <Ionicons name="sparkles" size={16} color="#FFFFFF" />
@@ -189,7 +184,7 @@ export default function LaundryScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: SOFT_TACTILE.colors.canvas,
   },
   container: {
     flex: 1,
@@ -199,12 +194,12 @@ const styles = StyleSheet.create({
     paddingBottom: 36,
   },
   title: {
-    color: '#F8FAFC',
-    fontSize: 24,
+    color: SOFT_TACTILE.colors.textPrimary,
+    fontSize: 25,
     fontWeight: '800',
   },
   subtitle: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
     marginTop: 4,
@@ -217,30 +212,33 @@ const styles = StyleSheet.create({
   },
   summaryCard: {
     flex: 1,
-    backgroundColor: '#111827',
-    borderRadius: 14,
-    padding: 12,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 22,
+    padding: 13,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
+    ...SOFT_TACTILE.shadow,
   },
   summaryNumber: {
     fontSize: 22,
     fontWeight: '800',
   },
   summaryLabel: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11,
     marginTop: 3,
     textAlign: 'center',
+    fontWeight: '600',
   },
   batchCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 15,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 26,
+    padding: 16,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
+    ...SOFT_TACTILE.shadow,
   },
   batchHeader: {
     marginBottom: 10,
@@ -256,28 +254,28 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   batchTitle: {
-    color: '#F8FAFC',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 16,
     fontWeight: '800',
   },
   batchTemp: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11.5,
     marginTop: 2,
   },
   countBadge: {
-    backgroundColor: '#1E293B',
+    backgroundColor: SOFT_TACTILE.colors.recessed,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
   },
   countBadgeText: {
-    color: '#E2E8F0',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   emptyBatchText: {
-    color: '#64748B',
+    color: SOFT_TACTILE.colors.textMuted,
     fontSize: 12.5,
     fontStyle: 'italic',
     paddingVertical: 6,
@@ -286,34 +284,35 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#0F172A',
+    backgroundColor: SOFT_TACTILE.colors.canvas,
     padding: 10,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   itemThumb: {
-    width: 46,
-    height: 46,
-    borderRadius: 8,
-    backgroundColor: '#1E293B',
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
   },
   itemName: {
-    color: '#F1F5F9',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   itemReason: {
-    color: '#FCA5A5',
+    color: SOFT_TACTILE.colors.clayRed,
     fontSize: 11,
     marginTop: 2,
+    fontWeight: '600',
   },
   singleWashBtn: {
-    backgroundColor: '#059669',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
+    backgroundColor: SOFT_TACTILE.colors.sage,
+    paddingHorizontal: 11,
+    paddingVertical: 8,
+    borderRadius: 999,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
@@ -321,40 +320,41 @@ const styles = StyleSheet.create({
   singleWashBtnText: {
     color: '#FFFFFF',
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   optionalSection: {
     marginTop: 6,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#1E293B',
+    borderTopColor: SOFT_TACTILE.colors.border,
   },
   optionalTitle: {
-    color: '#FBBF24',
+    color: SOFT_TACTILE.colors.ochre,
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 8,
   },
   itemOptionalMeta: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11,
     marginTop: 2,
   },
   optionalWashBtn: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 8,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    borderRadius: 999,
   },
   optionalWashBtnText: {
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   washBatchBtn: {
     marginTop: 8,
-    paddingVertical: 12,
-    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
+    paddingVertical: 13,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

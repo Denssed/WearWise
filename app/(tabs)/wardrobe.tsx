@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWardrobe } from '../../src/context/WardrobeContext';
+import { SOFT_TACTILE } from '../../src/theme/softTactile';
 import {
   CATEGORY_LABELS,
   GarmentCategory,
@@ -51,13 +52,13 @@ export default function WardrobeScreen() {
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Text style={styles.title}>Mi Colección Digital</Text>
+          <Text style={styles.title}>Mi Cápsula Digital</Text>
           <Text style={styles.subtitle}>
-            {garments.length} prendas recortadas · Control de usos y lavado
+            {garments.length} prendas recortadas · Control táctil de frescura y lavadas
           </Text>
         </View>
 
-        {/* FILTROS DE CATEGORÍA */}
+        {/* PÍLDORAS TÁCTILES DE CATEGORÍA */}
         <View>
           <ScrollView
             horizontal
@@ -86,12 +87,12 @@ export default function WardrobeScreen() {
           </ScrollView>
         </View>
 
-        {/* SUB-FILTRO DE ESTADO DE LIMPIEZA */}
+        {/* SELECTOR TÁCTIL DE ESTADO DE LIMPIEZA */}
         <View style={styles.statusTabsRow}>
           {[
             { key: 'all' as const, label: 'Todas' },
-            { key: 'clean' as const, label: 'Limpias para vestir' },
-            { key: 'needs_wash' as const, label: 'En cesto para lavar' },
+            { key: 'clean' as const, label: 'Frescas y Limpias' },
+            { key: 'needs_wash' as const, label: 'En Cesto' },
           ].map((tab) => {
             const active = statusFilter === tab.key;
             return (
@@ -113,7 +114,7 @@ export default function WardrobeScreen() {
           })}
         </View>
 
-        {/* GRILLA DE PRENDAS */}
+        {/* GRILLA DE PRENDAS SOFT TACTILE */}
         <ScrollView
           contentContainerStyle={styles.gridContainer}
           showsVerticalScrollIndicator={false}
@@ -130,7 +131,6 @@ export default function WardrobeScreen() {
 
             return (
               <View key={item.id} style={styles.card}>
-                {/* IMAGEN SIN FONDO SOBRE ESTUDIO TRANSPARENTE */}
                 <View style={styles.imageBackdrop}>
                   <Image
                     source={{ uri: item.cutout_image_url }}
@@ -144,12 +144,12 @@ export default function WardrobeScreen() {
                     ]}
                   >
                     <Ionicons
-                      name={isDirty ? 'water' : 'Sparkles' in Ionicons.glyphMap ? 'checkmark-circle' : 'checkmark-circle'}
+                      name={isDirty ? 'water' : 'checkmark-circle'}
                       size={11}
                       color="#FFFFFF"
                     />
                     <Text style={styles.statusBadgeText}>
-                      {isDirty ? 'Por lavar' : 'Limpia'}
+                      {isDirty ? 'Por lavar' : 'Fresca'}
                     </Text>
                   </View>
                 </View>
@@ -161,30 +161,20 @@ export default function WardrobeScreen() {
                   {item.name}
                 </Text>
 
-                {/* COLORES Y TANDA DE LAVADO */}
                 <View style={styles.tagsRow}>
-                  <View
-                    style={[
-                      styles.washGroupPill,
-                      { borderColor: washGroup.color },
-                    ]}
-                  >
-                    <Text style={[styles.washGroupText, { color: washGroup.color }]}>
-                      {washGroup.label}
-                    </Text>
+                  <View style={styles.washGroupPill}>
+                    <Text style={styles.washGroupText}>{washGroup.label}</Text>
                   </View>
                 </View>
 
-                {/* BARRA DE USOS ANTES DE LAVAR */}
+                {/* MEDIDOR TÁCTIL DE USOS ANTES DE LAVAR */}
                 <View style={styles.wearTrackerBox}>
                   <View style={styles.wearHeaderRow}>
-                    <Text style={styles.wearCounterLabel}>
-                      Usos desde último lavado:
-                    </Text>
+                    <Text style={styles.wearCounterLabel}>Puestas actuales:</Text>
                     <Text
                       style={[
                         styles.wearCounterNumbers,
-                        isDirty && { color: '#F87171' },
+                        isDirty && { color: SOFT_TACTILE.colors.clayRed },
                       ]}
                     >
                       {item.current_wears} / {item.max_wears_before_wash}
@@ -198,18 +188,17 @@ export default function WardrobeScreen() {
                         {
                           width: `${Math.round(wearRatio * 100)}%`,
                           backgroundColor: isDirty
-                            ? '#EF4444'
+                            ? SOFT_TACTILE.colors.clayRed
                             : wearRatio >= 0.65
-                            ? '#F59E0B'
-                            : '#10B981',
+                            ? SOFT_TACTILE.colors.ochre
+                            : SOFT_TACTILE.colors.sage,
                         },
                       ]}
                     />
                   </View>
 
-                  {/* AJUSTE DE UMBRAL DE LAVADO */}
                   <View style={styles.thresholdAdjustRow}>
-                    <Text style={styles.thresholdLabel}>Límite de puestas:</Text>
+                    <Text style={styles.thresholdLabel}>Máx usos:</Text>
                     <View style={styles.stepperBtns}>
                       <TouchableOpacity
                         style={styles.stepBtn}
@@ -220,7 +209,7 @@ export default function WardrobeScreen() {
                           )
                         }
                       >
-                        <Text style={styles.stepBtnText}>-</Text>
+                        <Text style={styles.stepBtnText}>−</Text>
                       </TouchableOpacity>
                       <Text style={styles.stepValueText}>
                         {item.max_wears_before_wash}
@@ -240,14 +229,17 @@ export default function WardrobeScreen() {
                   </View>
                 </View>
 
-                {/* BOTONES RÁPIDOS: +1 USO O LAVAR */}
                 <View style={styles.cardActions}>
                   {!isDirty ? (
                     <TouchableOpacity
                       style={styles.useOnceBtn}
                       onPress={() => logGarmentWear(item.id, false)}
                     >
-                      <Ionicons name="add-circle-outline" size={15} color="#E0E7FF" />
+                      <Ionicons
+                        name="add-circle-outline"
+                        size={15}
+                        color={SOFT_TACTILE.colors.terracotta}
+                      />
                       <Text style={styles.useOnceBtnText}>+1 Uso</Text>
                     </TouchableOpacity>
                   ) : null}
@@ -266,9 +258,14 @@ export default function WardrobeScreen() {
                     <Ionicons
                       name={isDirty ? 'sparkles-outline' : 'water-outline'}
                       size={14}
-                      color="#FFFFFF"
+                      color={isDirty ? '#FFFFFF' : SOFT_TACTILE.colors.textPrimary}
                     />
-                    <Text style={styles.washNowBtnText}>
+                    <Text
+                      style={[
+                        styles.washNowBtnText,
+                        isDirty && { color: '#FFFFFF' },
+                      ]}
+                    >
                       {isDirty ? 'Marcar Lavada' : 'A lavar'}
                     </Text>
                   </TouchableOpacity>
@@ -285,7 +282,7 @@ export default function WardrobeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: SOFT_TACTILE.colors.canvas,
   },
   container: {
     flex: 1,
@@ -296,12 +293,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   title: {
-    color: '#F8FAFC',
-    fontSize: 24,
+    color: SOFT_TACTILE.colors.textPrimary,
+    fontSize: 25,
     fontWeight: '800',
   },
   subtitle: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
     marginTop: 2,
   },
@@ -310,51 +307,51 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   filterChip: {
-    backgroundColor: '#111827',
-    paddingHorizontal: 14,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   filterChipActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#818CF8',
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
+    borderColor: SOFT_TACTILE.colors.terracotta,
   },
   filterChipText: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
   },
   statusTabsRow: {
     flexDirection: 'row',
-    backgroundColor: '#111827',
-    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
+    borderRadius: 16,
     padding: 4,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   statusTab: {
     flex: 1,
-    paddingVertical: 7,
+    paddingVertical: 8,
     alignItems: 'center',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   statusTabActive: {
-    backgroundColor: '#1E293B',
+    backgroundColor: SOFT_TACTILE.colors.card,
   },
   statusTabText: {
-    color: '#64748B',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 12,
     fontWeight: '600',
   },
   statusTabTextActive: {
-    color: '#F8FAFC',
-    fontWeight: '700',
+    color: SOFT_TACTILE.colors.textPrimary,
+    fontWeight: '800',
   },
   gridContainer: {
     flexDirection: 'row',
@@ -365,17 +362,18 @@ const styles = StyleSheet.create({
   },
   card: {
     width: '48%',
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    padding: 10,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 24,
+    padding: 11,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
+    ...SOFT_TACTILE.shadow,
   },
   imageBackdrop: {
     width: '100%',
     height: 140,
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
+    borderRadius: 18,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
     overflow: 'hidden',
     marginBottom: 8,
     position: 'relative',
@@ -386,20 +384,20 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     position: 'absolute',
-    top: 7,
-    left: 7,
+    top: 8,
+    left: 8,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 999,
   },
   statusBadgeClean: {
-    backgroundColor: 'rgba(16, 185, 129, 0.9)',
+    backgroundColor: SOFT_TACTILE.colors.sage,
   },
   statusBadgeDirty: {
-    backgroundColor: 'rgba(239, 68, 68, 0.92)',
+    backgroundColor: SOFT_TACTILE.colors.clayRed,
   },
   statusBadgeText: {
     color: '#FFFFFF',
@@ -407,15 +405,15 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   categoryLabel: {
-    color: '#818CF8',
+    color: SOFT_TACTILE.colors.terracotta,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   garmentName: {
-    color: '#F8FAFC',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 13.5,
-    fontWeight: '700',
+    fontWeight: '800',
     marginVertical: 3,
   },
   tagsRow: {
@@ -425,20 +423,23 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   washGroupPill: {
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   washGroupText: {
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 10,
     fontWeight: '700',
   },
   wearTrackerBox: {
-    backgroundColor: '#0F172A',
-    borderRadius: 10,
+    backgroundColor: SOFT_TACTILE.colors.canvas,
+    borderRadius: 14,
     padding: 8,
     marginBottom: 8,
+    borderWidth: 1,
+    borderColor: SOFT_TACTILE.colors.border,
   },
   wearHeaderRow: {
     flexDirection: 'row',
@@ -446,17 +447,17 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   wearCounterLabel: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 10,
   },
   wearCounterNumbers: {
-    color: '#E2E8F0',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
     fontWeight: '800',
   },
   progressTrack: {
     height: 6,
-    backgroundColor: '#1E293B',
+    backgroundColor: SOFT_TACTILE.colors.pillBg,
     borderRadius: 999,
     overflow: 'hidden',
     marginBottom: 7,
@@ -471,7 +472,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   thresholdLabel: {
-    color: '#64748B',
+    color: SOFT_TACTILE.colors.textMuted,
     fontSize: 10,
   },
   stepperBtns: {
@@ -480,22 +481,22 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   stepBtn: {
-    width: 20,
-    height: 20,
-    borderRadius: 5,
-    backgroundColor: '#1E293B',
+    width: 22,
+    height: 22,
+    borderRadius: 8,
+    backgroundColor: SOFT_TACTILE.colors.pillBg,
     alignItems: 'center',
     justifyContent: 'center',
   },
   stepBtnText: {
-    color: '#E2E8F0',
-    fontSize: 12,
+    color: SOFT_TACTILE.colors.textPrimary,
+    fontSize: 13,
     fontWeight: '800',
   },
   stepValueText: {
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   cardActions: {
     flexDirection: 'row',
@@ -503,35 +504,35 @@ const styles = StyleSheet.create({
   },
   useOnceBtn: {
     flex: 1,
-    backgroundColor: '#312E81',
+    backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   useOnceBtnText: {
-    color: '#E0E7FF',
+    color: SOFT_TACTILE.colors.terracotta,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   washNowBtn: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: SOFT_TACTILE.colors.recessed,
     paddingVertical: 8,
-    borderRadius: 8,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 4,
   },
   washNowBtnHighlighted: {
-    backgroundColor: '#059669',
+    backgroundColor: SOFT_TACTILE.colors.sage,
   },
   washNowBtnText: {
-    color: '#FFFFFF',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });

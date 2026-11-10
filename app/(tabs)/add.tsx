@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWardrobe } from '../../src/context/WardrobeContext';
 import { processGarmentWithAI } from '../../src/services/aiPipeline';
+import { SOFT_TACTILE } from '../../src/theme/softTactile';
 import {
   CATEGORY_LABELS,
   GarmentCategory,
@@ -68,7 +69,6 @@ export default function AddGarmentScreen() {
   const [bgEngineUsed, setBgEngineUsed] = useState<string>('');
   const [aiEngineUsed, setAiEngineUsed] = useState<string>('');
 
-  // Campos auto-etiquetados por Claude Haiku 5.5 Vision
   const [name, setName] = useState('');
   const [category, setCategory] = useState<GarmentCategory>('top');
   const [subcategory, setSubcategory] = useState('Camisa');
@@ -191,7 +191,6 @@ export default function AddGarmentScreen() {
       is_favorite: false,
     });
 
-    // Limpiar y navegar al armario
     setSourceImageUri(null);
     setCutoutImageUri(null);
     setName('');
@@ -210,195 +209,224 @@ export default function AddGarmentScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-        <Text style={styles.title}>Digitalizar Nueva Prenda</Text>
-        <Text style={styles.subtitle}>
-          Replicate (851-labs/background-remover) quita el fondo en ~1 segundo y Claude
-          Haiku 5.5 clasifica la tela, el grupo de lavado y cuántos usos aguanta.
-        </Text>
+          <Text style={styles.title}>Digitalizar Nueva Prenda</Text>
+          <Text style={styles.subtitle}>
+            Replicate (851-labs/background-remover) quita el fondo en ~1 segundo y Claude
+            Haiku 5.5 clasifica la tela, el grupo de lavado y cuántos usos aguanta.
+          </Text>
 
-        {/* BOTONES DE CÁMARA Y GALERÍA */}
-        <View style={styles.captureButtonsRow}>
-          <TouchableOpacity
-            style={styles.cameraButton}
-            onPress={() => handleCaptureOrPick(true)}
-            disabled={isProcessing}
-          >
-            <Ionicons name="camera" size={22} color="#FFFFFF" />
-            <Text style={styles.captureButtonText}>Tomar Foto</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.galleryButton}
-            onPress={() => handleCaptureOrPick(false)}
-            disabled={isProcessing}
-          >
-            <Ionicons name="images" size={22} color="#E0E7FF" />
-            <Text style={styles.captureButtonText}>Subir de Galería</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* PRUEBA RÁPIDA EN SIMULADOR / WEB */}
-        <View style={styles.demoStrip}>
-          <Text style={styles.demoStripLabel}>Prueba rápida en simulador:</Text>
-          <View style={styles.demoBtnsRow}>
-            {DEMO_SAMPLES.map((s) => (
-              <TouchableOpacity
-                key={s.label}
-                style={styles.demoBtn}
-                onPress={() => handleLoadSample(s)}
-              >
-                <Ionicons name="flash-outline" size={13} color="#A5B4FC" />
-                <Text style={styles.demoBtnText}>{s.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* ESTADO DE PROCESAMIENTO */}
-        {isProcessing ? (
-          <View style={styles.processingCard}>
-            <ActivityIndicator size="large" color="#818CF8" />
-            <Text style={styles.processingText}>{pipelineStage}</Text>
-          </View>
-        ) : null}
-
-        {/* PREVISUALIZACIÓN DEL RECORTE + FORMULARIO AUTO-ETIQUETADO */}
-        {cutoutImageUri && !isProcessing ? (
-          <View style={styles.formCard}>
-            <View style={styles.previewSection}>
-              <View style={styles.checkerboardBox}>
-                <Image
-                  source={{ uri: cutoutImageUri }}
-                  style={styles.cutoutPreview}
-                  resizeMode="cover"
-                />
-              </View>
-              <View style={styles.engineBadgesRow}>
-                <View style={styles.engineBadge}>
-                  <Ionicons name="cut-outline" size={12} color="#34D399" />
-                  <Text style={styles.engineBadgeText}>{bgEngineUsed}</Text>
-                </View>
-                <View style={styles.engineBadge}>
-                  <Ionicons name="sparkles-outline" size={12} color="#818CF8" />
-                  <Text style={styles.engineBadgeText}>{aiEngineUsed}</Text>
-                </View>
-              </View>
-            </View>
-
-            <Text style={styles.fieldLabel}>Nombre de la prenda</Text>
-            <TextInput
-              style={styles.input}
-              value={name}
-              onChangeText={setName}
-              placeholder="Ej. Camisa Oxford Azul"
-              placeholderTextColor="#64748B"
-            />
-
-            <Text style={styles.fieldLabel}>Categoría</Text>
-            <View style={styles.pillsWrap}>
-              {(Object.keys(CATEGORY_LABELS) as GarmentCategory[]).map((cat) => {
-                const active = category === cat;
-                return (
-                  <TouchableOpacity
-                    key={cat}
-                    style={[styles.choicePill, active && styles.choicePillActive]}
-                    onPress={() => setCategory(cat)}
-                  >
-                    <Text
-                      style={[
-                        styles.choicePillText,
-                        active && styles.choicePillTextActive,
-                      ]}
-                    >
-                      {CATEGORY_LABELS[cat]}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <View style={styles.twoColRow}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Colores detectados</Text>
-                <TextInput
-                  style={styles.input}
-                  value={colorsText}
-                  onChangeText={setColorsText}
-                  placeholder="Azul, Blanco"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.fieldLabel}>Tela / Material</Text>
-                <TextInput
-                  style={styles.input}
-                  value={fabric}
-                  onChangeText={setFabric}
-                  placeholder="Algodón"
-                  placeholderTextColor="#64748B"
-                />
-              </View>
-            </View>
-
-            <Text style={styles.fieldLabel}>
-              Grupo de Cesto de Lavandería (Sugerido por Claude)
-            </Text>
-            <View style={styles.pillsWrap}>
-              {(Object.keys(WASH_GROUP_INFO) as WashCareGroup[]).map((grp) => {
-                const info = WASH_GROUP_INFO[grp];
-                const active = washGroup === grp;
-                return (
-                  <TouchableOpacity
-                    key={grp}
-                    style={[
-                      styles.choicePill,
-                      active && { backgroundColor: info.color, borderColor: info.color },
-                    ]}
-                    onPress={() => setWashGroup(grp)}
-                  >
-                    <Text
-                      style={[
-                        styles.choicePillText,
-                        active && { color: '#FFFFFF', fontWeight: '700' },
-                      ]}
-                    >
-                      {info.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            <Text style={styles.fieldLabel}>
-              Máximo de usos antes de necesitar lavado
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={maxWears}
-              onChangeText={setMaxWears}
-              keyboardType="number-pad"
-              placeholder="Ej. 3"
-              placeholderTextColor="#64748B"
-            />
-
-            <Text style={styles.fieldLabel}>Instrucción de cuidado textil</Text>
-            <TextInput
-              style={styles.input}
-              value={careInstructions}
-              onChangeText={setCareInstructions}
-            />
+          {/* BOTONES TÁCTILES DE CÁMARA Y GALERÍA */}
+          <View style={styles.captureButtonsRow}>
+            <TouchableOpacity
+              style={styles.cameraButton}
+              onPress={() => handleCaptureOrPick(true)}
+              disabled={isProcessing}
+            >
+              <Ionicons name="camera" size={22} color="#FFFFFF" />
+              <Text style={styles.captureButtonText}>Tomar Foto</Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.saveGarmentBtn}
-              onPress={handleSaveToWardrobe}
+              style={styles.galleryButton}
+              onPress={() => handleCaptureOrPick(false)}
+              disabled={isProcessing}
             >
-              <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-              <Text style={styles.saveGarmentBtnText}>
-                Guardar Prenda en Mi Colección
+              <Ionicons
+                name="images"
+                size={22}
+                color={SOFT_TACTILE.colors.textPrimary}
+              />
+              <Text
+                style={[
+                  styles.captureButtonText,
+                  { color: SOFT_TACTILE.colors.textPrimary },
+                ]}
+              >
+                Subir de Galería
               </Text>
             </TouchableOpacity>
           </View>
-        ) : null}
+
+          {/* PRUEBA RÁPIDA EN SIMULADOR */}
+          <View style={styles.demoStrip}>
+            <Text style={styles.demoStripLabel}>
+              Prueba rápida en simulador (Soft Tactile):
+            </Text>
+            <View style={styles.demoBtnsRow}>
+              {DEMO_SAMPLES.map((s) => (
+                <TouchableOpacity
+                  key={s.label}
+                  style={styles.demoBtn}
+                  onPress={() => handleLoadSample(s)}
+                >
+                  <Ionicons
+                    name="sparkles-outline"
+                    size={13}
+                    color={SOFT_TACTILE.colors.terracotta}
+                  />
+                  <Text style={styles.demoBtnText}>{s.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {isProcessing ? (
+            <View style={styles.processingCard}>
+              <ActivityIndicator
+                size="large"
+                color={SOFT_TACTILE.colors.terracotta}
+              />
+              <Text style={styles.processingText}>{pipelineStage}</Text>
+            </View>
+          ) : null}
+
+          {cutoutImageUri && !isProcessing ? (
+            <View style={styles.formCard}>
+              <View style={styles.previewSection}>
+                <View style={styles.checkerboardBox}>
+                  <Image
+                    source={{ uri: cutoutImageUri }}
+                    style={styles.cutoutPreview}
+                    resizeMode="cover"
+                  />
+                </View>
+                <View style={styles.engineBadgesRow}>
+                  <View style={styles.engineBadge}>
+                    <Ionicons
+                      name="cut-outline"
+                      size={12}
+                      color={SOFT_TACTILE.colors.sage}
+                    />
+                    <Text style={styles.engineBadgeText}>{bgEngineUsed}</Text>
+                  </View>
+                  <View style={styles.engineBadge}>
+                    <Ionicons
+                      name="sparkles-outline"
+                      size={12}
+                      color={SOFT_TACTILE.colors.terracotta}
+                    />
+                    <Text style={styles.engineBadgeText}>{aiEngineUsed}</Text>
+                  </View>
+                </View>
+              </View>
+
+              <Text style={styles.fieldLabel}>Nombre de la prenda</Text>
+              <TextInput
+                style={styles.input}
+                value={name}
+                onChangeText={setName}
+                placeholder="Ej. Camisa Oxford Azul"
+                placeholderTextColor={SOFT_TACTILE.colors.textMuted}
+              />
+
+              <Text style={styles.fieldLabel}>Categoría</Text>
+              <View style={styles.pillsWrap}>
+                {(Object.keys(CATEGORY_LABELS) as GarmentCategory[]).map((cat) => {
+                  const active = category === cat;
+                  return (
+                    <TouchableOpacity
+                      key={cat}
+                      style={[
+                        styles.choicePill,
+                        active && styles.choicePillActive,
+                      ]}
+                      onPress={() => setCategory(cat)}
+                    >
+                      <Text
+                        style={[
+                          styles.choicePillText,
+                          active && styles.choicePillTextActive,
+                        ]}
+                      >
+                        {CATEGORY_LABELS[cat]}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <View style={styles.twoColRow}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Colores detectados</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={colorsText}
+                    onChangeText={setColorsText}
+                    placeholder="Azul, Blanco"
+                    placeholderTextColor={SOFT_TACTILE.colors.textMuted}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.fieldLabel}>Tela / Material</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={fabric}
+                    onChangeText={setFabric}
+                    placeholder="Algodón"
+                    placeholderTextColor={SOFT_TACTILE.colors.textMuted}
+                  />
+                </View>
+              </View>
+
+              <Text style={styles.fieldLabel}>
+                Tanda de Lavandería (Sugerida por Claude)
+              </Text>
+              <View style={styles.pillsWrap}>
+                {(Object.keys(WASH_GROUP_INFO) as WashCareGroup[]).map((grp) => {
+                  const info = WASH_GROUP_INFO[grp];
+                  const active = washGroup === grp;
+                  return (
+                    <TouchableOpacity
+                      key={grp}
+                      style={[
+                        styles.choicePill,
+                        active && styles.choicePillActive,
+                      ]}
+                      onPress={() => setWashGroup(grp)}
+                    >
+                      <Text
+                        style={[
+                          styles.choicePillText,
+                          active && styles.choicePillTextActive,
+                        ]}
+                      >
+                        {info.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+
+              <Text style={styles.fieldLabel}>
+                Máximo de puestas antes de necesitar lavado
+              </Text>
+              <TextInput
+                style={styles.input}
+                value={maxWears}
+                onChangeText={setMaxWears}
+                keyboardType="number-pad"
+                placeholder="Ej. 3"
+                placeholderTextColor={SOFT_TACTILE.colors.textMuted}
+              />
+
+              <Text style={styles.fieldLabel}>Instrucción de cuidado textil</Text>
+              <TextInput
+                style={styles.input}
+                value={careInstructions}
+                onChangeText={setCareInstructions}
+              />
+
+              <TouchableOpacity
+                style={styles.saveGarmentBtn}
+                onPress={handleSaveToWardrobe}
+              >
+                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                <Text style={styles.saveGarmentBtnText}>
+                  Guardar Prenda en Mi Cápsula
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -408,7 +436,7 @@ export default function AddGarmentScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: SOFT_TACTILE.colors.canvas,
   },
   container: {
     flex: 1,
@@ -418,12 +446,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   title: {
-    color: '#F8FAFC',
-    fontSize: 24,
+    color: SOFT_TACTILE.colors.textPrimary,
+    fontSize: 25,
     fontWeight: '800',
   },
   subtitle: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
     marginTop: 4,
@@ -436,43 +464,44 @@ const styles = StyleSheet.create({
   },
   cameraButton: {
     flex: 1,
-    backgroundColor: '#4F46E5',
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    ...SOFT_TACTILE.shadow,
   },
   galleryButton: {
     flex: 1,
-    backgroundColor: '#1E293B',
+    backgroundColor: SOFT_TACTILE.colors.card,
     paddingVertical: 16,
-    borderRadius: 16,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   captureButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   demoStrip: {
-    backgroundColor: '#111827',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 20,
+    padding: 13,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
     marginBottom: 16,
   },
   demoStripLabel: {
-    color: '#94A3B8',
-    fontSize: 11,
-    fontWeight: '600',
+    color: SOFT_TACTILE.colors.textSecondary,
+    fontSize: 11.5,
+    fontWeight: '700',
     marginBottom: 8,
   },
   demoBtnsRow: {
@@ -483,39 +512,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#1E1B4B',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#3730A3',
+    backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
   },
   demoBtnText: {
-    color: '#C7D2FE',
+    color: SOFT_TACTILE.colors.terracotta,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '800',
   },
   processingCard: {
-    backgroundColor: '#111827',
-    borderRadius: 16,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 24,
     padding: 24,
     alignItems: 'center',
     gap: 12,
     borderWidth: 1,
-    borderColor: '#312E81',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   processingText: {
-    color: '#E0E7FF',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 13,
     textAlign: 'center',
-    fontWeight: '600',
+    fontWeight: '700',
   },
   formCard: {
-    backgroundColor: '#111827',
-    borderRadius: 18,
-    padding: 16,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 28,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
+    ...SOFT_TACTILE.shadow,
   },
   previewSection: {
     alignItems: 'center',
@@ -524,11 +552,11 @@ const styles = StyleSheet.create({
   checkerboardBox: {
     width: 190,
     height: 190,
-    borderRadius: 16,
-    backgroundColor: '#1E293B',
+    borderRadius: 24,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#334155',
+    borderColor: SOFT_TACTILE.colors.border,
     marginBottom: 10,
   },
   cutoutPreview: {
@@ -543,33 +571,33 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 10,
+    backgroundColor: SOFT_TACTILE.colors.canvas,
+    paddingHorizontal: 11,
     paddingVertical: 5,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   engineBadgeText: {
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
     fontWeight: '700',
   },
   fieldLabel: {
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 6,
     marginTop: 10,
   },
   input: {
-    backgroundColor: '#0F172A',
+    backgroundColor: SOFT_TACTILE.colors.canvas,
     borderWidth: 1,
-    borderColor: '#1E293B',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#F8FAFC',
+    borderColor: SOFT_TACTILE.colors.border,
+    borderRadius: 14,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 13.5,
   },
   twoColRow: {
@@ -582,31 +610,31 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   choicePill: {
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 8,
+    backgroundColor: SOFT_TACTILE.colors.canvas,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   choicePillActive: {
-    backgroundColor: '#4F46E5',
-    borderColor: '#818CF8',
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
+    borderColor: SOFT_TACTILE.colors.terracotta,
   },
   choicePillText: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   choicePillTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
   },
   saveGarmentBtn: {
     marginTop: 20,
-    backgroundColor: '#10B981',
-    paddingVertical: 14,
-    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.sage,
+    paddingVertical: 15,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

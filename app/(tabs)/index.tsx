@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useWardrobe } from '../../src/context/WardrobeContext';
+import { SOFT_TACTILE } from '../../src/theme/softTactile';
 import { CATEGORY_LABELS, Garment } from '../../src/types/wardrobe';
 
 export default function WeeklyPlannerScreen() {
@@ -64,7 +65,7 @@ export default function WeeklyPlannerScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER */}
+        {/* HEADER SOFT TACTILE */}
         <View style={styles.headerRow}>
           <View style={{ flex: 1 }}>
             <View style={styles.brandRow}>
@@ -78,19 +79,33 @@ export default function WeeklyPlannerScreen() {
                 ]}
               >
                 <Ionicons
-                  name={profile.profileMode === 'custom' ? 'options-outline' : 'flash-outline'}
+                  name={profile.profileMode === 'custom' ? 'options-outline' : 'leaf-outline'}
                   size={12}
-                  color="#E0E7FF"
+                  color={
+                    profile.profileMode === 'custom'
+                      ? SOFT_TACTILE.colors.sage
+                      : SOFT_TACTILE.colors.terracotta
+                  }
                 />
-                <Text style={styles.modeBadgeText}>
+                <Text
+                  style={[
+                    styles.modeBadgeText,
+                    {
+                      color:
+                        profile.profileMode === 'custom'
+                          ? SOFT_TACTILE.colors.sage
+                          : SOFT_TACTILE.colors.terracotta,
+                    },
+                  ]}
+                >
                   {profile.profileMode === 'custom'
-                    ? 'Perfil Personalizado'
-                    : 'Perfil Default'}
+                    ? 'Cápsula Personalizada'
+                    : 'Cápsula Default'}
                 </Text>
               </View>
             </View>
             <Text style={styles.subtitle}>
-              Hola, {profile.displayName} · Estilista Claude Haiku 5.5
+              Hola, {profile.displayName} · Curaduría por Claude Haiku 5.5
             </Text>
           </View>
 
@@ -99,25 +114,38 @@ export default function WeeklyPlannerScreen() {
             onPress={refreshLocationAndWeather}
             disabled={isLoadingWeather}
           >
-            <Ionicons name="location-outline" size={14} color="#38BDF8" />
+            <Ionicons
+              name="location-outline"
+              size={14}
+              color={SOFT_TACTILE.colors.waterBlue}
+            />
             <Text style={styles.weatherChipText} numberOfLines={1}>
               {isLoadingWeather ? 'Clima...' : profile.cityName}
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* RESUMEN RÁPIDO DE ARMARIO Y LAVANDERÍA */}
+        {/* PÍLDORAS TÁCTILES DE ESTADO DEL ARMARIO */}
         <View style={styles.metricsRow}>
           <TouchableOpacity
             style={styles.metricCard}
             onPress={() => router.push('/(tabs)/wardrobe')}
           >
-            <View style={[styles.metricIconWrap, { backgroundColor: '#1E293B' }]}>
-              <Ionicons name="checkmark-circle" size={20} color="#34D399" />
+            <View
+              style={[
+                styles.metricIconWrap,
+                { backgroundColor: SOFT_TACTILE.colors.sageSoft },
+              ]}
+            >
+              <Ionicons
+                name="checkmark-circle"
+                size={20}
+                color={SOFT_TACTILE.colors.sage}
+              />
             </View>
             <View>
               <Text style={styles.metricValue}>{cleanCount}</Text>
-              <Text style={styles.metricLabel}>Prendas limpias</Text>
+              <Text style={styles.metricLabel}>Prendas frescas</Text>
             </View>
           </TouchableOpacity>
 
@@ -125,23 +153,37 @@ export default function WeeklyPlannerScreen() {
             style={styles.metricCard}
             onPress={() => router.push('/(tabs)/laundry')}
           >
-            <View style={[styles.metricIconWrap, { backgroundColor: '#1E293B' }]}>
+            <View
+              style={[
+                styles.metricIconWrap,
+                {
+                  backgroundColor:
+                    dirtyCount > 0
+                      ? SOFT_TACTILE.colors.clayRedSoft
+                      : SOFT_TACTILE.colors.waterBlueSoft,
+                },
+              ]}
+            >
               <Ionicons
                 name="water"
                 size={20}
-                color={dirtyCount > 0 ? '#F87171' : '#60A5FA'}
+                color={
+                  dirtyCount > 0
+                    ? SOFT_TACTILE.colors.clayRed
+                    : SOFT_TACTILE.colors.waterBlue
+                }
               />
             </View>
             <View>
               <Text
                 style={[
                   styles.metricValue,
-                  dirtyCount > 0 && { color: '#F87171' },
+                  dirtyCount > 0 && { color: SOFT_TACTILE.colors.clayRed },
                 ]}
               >
                 {dirtyCount}
               </Text>
-              <Text style={styles.metricLabel}>Para lavar</Text>
+              <Text style={styles.metricLabel}>En cesto</Text>
             </View>
           </TouchableOpacity>
 
@@ -155,26 +197,30 @@ export default function WeeklyPlannerScreen() {
             ) : (
               <>
                 <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                <Text style={styles.generateButtonText}>Sugerir Semana</Text>
+                <Text style={styles.generateButtonText}>Armar Semana</Text>
               </>
             )}
           </TouchableOpacity>
         </View>
 
-        {/* BANNER DE ESTRATEGIA DE CLAUDE */}
+        {/* RESUMEN EDITORIAL DE CLAUDE */}
         {weeklyPlan?.claudeSummary ? (
           <View style={styles.aiSummaryBox}>
             <View style={styles.aiSummaryHeader}>
-              <Ionicons name="sparkles" size={15} color="#A5B4FC" />
+              <Ionicons
+                name="sparkles"
+                size={14}
+                color={SOFT_TACTILE.colors.terracotta}
+              />
               <Text style={styles.aiSummaryTitle}>
-                Estrategia Semanal ({weeklyPlan.generatedBy === 'claude_haiku' ? 'Claude Haiku 5.5' : 'Motor Inteligente'})
+                Nota del Estilista ({weeklyPlan.generatedBy === 'claude_haiku' ? 'Claude Haiku 5.5' : 'Curaduría Local'})
               </Text>
             </View>
             <Text style={styles.aiSummaryText}>{weeklyPlan.claudeSummary}</Text>
           </View>
         ) : null}
 
-        {/* SELECTOR DE LOS 7 DÍAS + CLIMA */}
+        {/* SELECTOR DE DÍAS TÁCTIL + CLIMA */}
         <Text style={styles.sectionTitle}>Tu Semana de Outfits</Text>
         <ScrollView
           horizontal
@@ -200,34 +246,45 @@ export default function WeeklyPlannerScreen() {
                     {day.dayName.slice(0, 3)}
                   </Text>
                   {day.wornConfirmed ? (
-                    <Ionicons name="checkmark-circle" size={14} color="#34D399" />
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={14}
+                      color={isSelected ? '#FFFFFF' : SOFT_TACTILE.colors.sage}
+                    />
                   ) : null}
                 </View>
 
                 <Ionicons
                   name={w?.icon || 'partly-sunny'}
                   size={20}
-                  color={isSelected ? '#FFFFFF' : '#94A3B8'}
+                  color={isSelected ? '#FFFFFF' : SOFT_TACTILE.colors.textSecondary}
                   style={{ marginVertical: 6 }}
                 />
 
                 <Text
                   style={[
                     styles.dayTempText,
-                    isSelected && { color: '#E0E7FF' },
+                    isSelected && { color: '#FFFDF9' },
                   ]}
                 >
                   {w ? `${w.tempMin}° / ${w.tempMax}°` : '15° / 24°'}
                 </Text>
                 {w && w.rainProbability >= 35 ? (
-                  <Text style={styles.rainBadge}>{w.rainProbability}% lluvia</Text>
+                  <Text
+                    style={[
+                      styles.rainBadge,
+                      isSelected && { color: '#FDE68A' },
+                    ]}
+                  >
+                    {w.rainProbability}% lluvia
+                  </Text>
                 ) : null}
               </TouchableOpacity>
             );
           })}
         </ScrollView>
 
-        {/* TARJETA DEL OUTFIT DEL DÍA SELECCIONADO */}
+        {/* TARJETA FLAT-LAY DEL OUTFIT DEL DÍA */}
         {activeDayPlan ? (
           <View style={styles.outfitCard}>
             <View style={styles.outfitHeader}>
@@ -243,7 +300,11 @@ export default function WeeklyPlannerScreen() {
 
               {activeWeather ? (
                 <View style={styles.weatherDetailBox}>
-                  <Ionicons name={activeWeather.icon} size={22} color="#38BDF8" />
+                  <Ionicons
+                    name={activeWeather.icon}
+                    size={22}
+                    color={SOFT_TACTILE.colors.ochre}
+                  />
                   <Text style={styles.weatherDetailTemp}>
                     {activeWeather.tempMax}°C
                   </Text>
@@ -251,7 +312,7 @@ export default function WeeklyPlannerScreen() {
               ) : null}
             </View>
 
-            {/* COLLAGE DE PRENDAS DEL OUTFIT (RECORTES) */}
+            {/* COLLAGE FLAT-LAY DE PRENDAS RECORTADAS */}
             <View style={styles.garmentGrid}>
               {outfitGarments.map((item) => {
                 const remaining = Math.max(
@@ -277,7 +338,7 @@ export default function WeeklyPlannerScreen() {
                         <Text style={styles.wearPillText}>
                           {isDirty
                             ? 'Lavar ya'
-                            : `${remaining} ${remaining === 1 ? 'uso libre' : 'usos libres'}`}
+                            : `${remaining} ${remaining === 1 ? 'puesta libre' : 'puestas libres'}`}
                         </Text>
                       </View>
                     </View>
@@ -298,21 +359,33 @@ export default function WeeklyPlannerScreen() {
             {/* NOTAS DE ESTILO Y CLIMA */}
             <View style={styles.tipsContainer}>
               <View style={styles.tipRow}>
-                <Ionicons name="bulb-outline" size={16} color="#FBBF24" />
+                <Ionicons
+                  name="sparkles-outline"
+                  size={16}
+                  color={SOFT_TACTILE.colors.terracotta}
+                />
                 <Text style={styles.tipText}>{activeDayPlan.stylingTip}</Text>
               </View>
               <View style={styles.tipRow}>
-                <Ionicons name="thermometer-outline" size={16} color="#38BDF8" />
+                <Ionicons
+                  name="thermometer-outline"
+                  size={16}
+                  color={SOFT_TACTILE.colors.waterBlue}
+                />
                 <Text style={styles.tipText}>{activeDayPlan.weatherNote}</Text>
               </View>
             </View>
 
-            {/* BOTONES DE CONTROL DE USO Y LAVADO */}
+            {/* BOTONES TÁCTILES DE USO Y LAVANDERÍA */}
             {activeDayPlan.wornConfirmed ? (
               <View style={styles.wornConfirmedBanner}>
-                <Ionicons name="checkmark-done-circle" size={20} color="#34D399" />
+                <Ionicons
+                  name="checkmark-done-circle"
+                  size={20}
+                  color={SOFT_TACTILE.colors.sage}
+                />
                 <Text style={styles.wornConfirmedText}>
-                  Uso registrado hoy · Contadores de lavado actualizados
+                  Look registrado hoy · Frescura del armario actualizada
                 </Text>
               </View>
             ) : (
@@ -329,8 +402,12 @@ export default function WeeklyPlannerScreen() {
                   style={styles.forceWashBtn}
                   onPress={() => logDayOutfitWear(activeDayPlan.dayIndex, true)}
                 >
-                  <Ionicons name="water-outline" size={18} color="#FCA5A5" />
-                  <Text style={styles.forceWashBtnText}>Ensució / Lavar</Text>
+                  <Ionicons
+                    name="water-outline"
+                    size={18}
+                    color={SOFT_TACTILE.colors.clayRed}
+                  />
+                  <Text style={styles.forceWashBtnText}>A lavar</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -344,14 +421,14 @@ export default function WeeklyPlannerScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#0B0F19',
+    backgroundColor: SOFT_TACTILE.colors.canvas,
   },
   container: {
     flex: 1,
   },
   contentContainer: {
     padding: 18,
-    paddingBottom: 36,
+    paddingBottom: 38,
   },
   headerRow: {
     flexDirection: 'row',
@@ -365,32 +442,31 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   appTitle: {
-    fontSize: 26,
+    fontSize: 27,
     fontWeight: '800',
-    color: '#F8FAFC',
-    letterSpacing: -0.5,
+    color: SOFT_TACTILE.colors.textPrimary,
+    letterSpacing: -0.6,
   },
   modeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 9,
-    paddingVertical: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 999,
   },
   modeBadgeDefault: {
-    backgroundColor: '#312E81',
+    backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
   },
   modeBadgeCustom: {
-    backgroundColor: '#065F46',
+    backgroundColor: SOFT_TACTILE.colors.sageSoft,
   },
   modeBadgeText: {
-    color: '#E0E7FF',
     fontSize: 11,
     fontWeight: '700',
   },
   subtitle: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
     marginTop: 3,
   },
@@ -398,18 +474,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 999,
     borderWidth: 1,
-    borderColor: '#334155',
-    maxWidth: 140,
+    borderColor: SOFT_TACTILE.colors.border,
+    maxWidth: 145,
   },
   weatherChipText: {
-    color: '#E2E8F0',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   metricsRow: {
     flexDirection: 'row',
@@ -422,48 +498,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    backgroundColor: '#111827',
+    backgroundColor: SOFT_TACTILE.colors.card,
     padding: 12,
-    borderRadius: 14,
+    borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
+    ...SOFT_TACTILE.shadow,
   },
   metricIconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 38,
+    height: 38,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
   metricValue: {
-    color: '#F8FAFC',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 18,
     fontWeight: '800',
   },
   metricLabel: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11,
   },
   generateButton: {
-    backgroundColor: '#4F46E5',
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    borderRadius: 14,
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
+    paddingHorizontal: 15,
+    paddingVertical: 15,
+    borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    ...SOFT_TACTILE.shadow,
   },
   generateButtonText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   aiSummaryBox: {
-    backgroundColor: '#1E1B4B',
-    borderRadius: 14,
-    padding: 13,
+    backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
+    borderRadius: 22,
+    padding: 14,
     borderWidth: 1,
-    borderColor: '#3730A3',
+    borderColor: '#E8C5B8',
     marginBottom: 18,
   },
   aiSummaryHeader: {
@@ -473,21 +551,21 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   aiSummaryTitle: {
-    color: '#C7D2FE',
-    fontSize: 12,
-    fontWeight: '700',
+    color: SOFT_TACTILE.colors.terracotta,
+    fontSize: 11.5,
+    fontWeight: '800',
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
   aiSummaryText: {
-    color: '#E0E7FF',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 13,
     lineHeight: 19,
   },
   sectionTitle: {
-    color: '#F8FAFC',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 17,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 10,
   },
   daysScroll: {
@@ -495,18 +573,18 @@ const styles = StyleSheet.create({
     paddingBottom: 14,
   },
   dayPill: {
-    width: 78,
-    backgroundColor: '#111827',
-    borderRadius: 16,
-    paddingVertical: 11,
+    width: 80,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 24,
+    paddingVertical: 12,
     paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   dayPillActive: {
-    backgroundColor: '#4338CA',
-    borderColor: '#818CF8',
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
+    borderColor: SOFT_TACTILE.colors.terracotta,
   },
   dayPillHeader: {
     flexDirection: 'row',
@@ -514,30 +592,31 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   dayPillName: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   dayPillNameActive: {
     color: '#FFFFFF',
   },
   dayTempText: {
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   rainBadge: {
     marginTop: 3,
-    fontSize: 9,
-    color: '#38BDF8',
+    fontSize: 9.5,
+    color: SOFT_TACTILE.colors.waterBlue,
     fontWeight: '700',
   },
   outfitCard: {
-    backgroundColor: '#111827',
-    borderRadius: 20,
-    padding: 16,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 28,
+    padding: 18,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
+    ...SOFT_TACTILE.shadow,
   },
   outfitHeader: {
     flexDirection: 'row',
@@ -549,43 +628,41 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 4,
+    marginBottom: 5,
   },
   dayFullLabel: {
-    color: '#818CF8',
+    color: SOFT_TACTILE.colors.terracotta,
     fontSize: 13,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   occasionTag: {
-    backgroundColor: '#1E293B',
-    paddingHorizontal: 8,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
+    paddingHorizontal: 9,
     paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: 999,
   },
   occasionTagText: {
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: '700',
   },
   outfitTitle: {
-    color: '#F8FAFC',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 20,
     fontWeight: '800',
   },
   weatherDetailBox: {
     alignItems: 'center',
-    backgroundColor: '#0F172A',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#1E293B',
+    backgroundColor: SOFT_TACTILE.colors.ochreSoft,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 16,
   },
   weatherDetailTemp: {
-    color: '#E2E8F0',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 12,
-    fontWeight: '700',
+    fontWeight: '800',
     marginTop: 2,
   },
   garmentGrid: {
@@ -596,17 +673,17 @@ const styles = StyleSheet.create({
   },
   outfitGarmentCard: {
     width: '48%',
-    backgroundColor: '#0F172A',
-    borderRadius: 14,
+    backgroundColor: SOFT_TACTILE.colors.canvas,
+    borderRadius: 20,
     padding: 10,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   cutoutImageBox: {
     width: '100%',
-    height: 130,
-    borderRadius: 10,
-    backgroundColor: '#1E293B',
+    height: 132,
+    borderRadius: 16,
+    backgroundColor: SOFT_TACTILE.colors.recessed,
     overflow: 'hidden',
     marginBottom: 8,
     position: 'relative',
@@ -617,17 +694,17 @@ const styles = StyleSheet.create({
   },
   wearPillOverlay: {
     position: 'absolute',
-    bottom: 6,
-    right: 6,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    bottom: 7,
+    right: 7,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 999,
   },
   wearPillClean: {
-    backgroundColor: 'rgba(16, 185, 129, 0.9)',
+    backgroundColor: SOFT_TACTILE.colors.sage,
   },
   wearPillDirty: {
-    backgroundColor: 'rgba(239, 68, 68, 0.9)',
+    backgroundColor: SOFT_TACTILE.colors.clayRed,
   },
   wearPillText: {
     color: '#FFFFFF',
@@ -635,30 +712,30 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   garmentItemCategory: {
-    color: '#818CF8',
+    color: SOFT_TACTILE.colors.terracotta,
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: '800',
     textTransform: 'uppercase',
   },
   garmentItemName: {
-    color: '#F1F5F9',
+    color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
     marginTop: 2,
   },
   garmentWearCounter: {
-    color: '#94A3B8',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11,
     marginTop: 3,
   },
   tipsContainer: {
-    backgroundColor: '#0F172A',
-    borderRadius: 12,
-    padding: 12,
+    backgroundColor: SOFT_TACTILE.colors.canvas,
+    borderRadius: 18,
+    padding: 13,
     gap: 8,
     marginBottom: 14,
     borderWidth: 1,
-    borderColor: '#1E293B',
+    borderColor: SOFT_TACTILE.colors.border,
   },
   tipRow: {
     flexDirection: 'row',
@@ -667,7 +744,7 @@ const styles = StyleSheet.create({
   },
   tipText: {
     flex: 1,
-    color: '#CBD5E1',
+    color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 12.5,
     lineHeight: 18,
   },
@@ -677,9 +754,9 @@ const styles = StyleSheet.create({
   },
   wearTodayBtn: {
     flex: 2,
-    backgroundColor: '#10B981',
-    paddingVertical: 13,
-    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.sage,
+    paddingVertical: 14,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -688,29 +765,29 @@ const styles = StyleSheet.create({
   wearTodayBtnText: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: '800',
   },
   forceWashBtn: {
     flex: 1,
-    backgroundColor: '#3F1D24',
-    paddingVertical: 13,
-    borderRadius: 12,
+    backgroundColor: SOFT_TACTILE.colors.clayRedSoft,
+    paddingVertical: 14,
+    borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
     borderWidth: 1,
-    borderColor: '#7F1D1D',
+    borderColor: '#EABCB7',
   },
   forceWashBtnText: {
-    color: '#FCA5A5',
-    fontSize: 12,
-    fontWeight: '700',
+    color: SOFT_TACTILE.colors.clayRed,
+    fontSize: 12.5,
+    fontWeight: '800',
   },
   wornConfirmedBanner: {
-    backgroundColor: '#064E3B',
-    borderRadius: 12,
-    paddingVertical: 12,
+    backgroundColor: SOFT_TACTILE.colors.sageSoft,
+    borderRadius: 18,
+    paddingVertical: 13,
     paddingHorizontal: 14,
     flexDirection: 'row',
     alignItems: 'center',
@@ -718,8 +795,8 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   wornConfirmedText: {
-    color: '#A7F3D0',
+    color: SOFT_TACTILE.colors.sage,
     fontSize: 13,
-    fontWeight: '700',
+    fontWeight: '800',
   },
 });
