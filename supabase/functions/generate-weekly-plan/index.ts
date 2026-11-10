@@ -1,16 +1,14 @@
 // ============================================================================
 // SUPABASE EDGE FUNCTION: generate-weekly-plan
-// Genera el plan semanal de 7 días usando Claude Haiku 5.5 / 4.5 combinando:
-// - Únicamente prendas LIMPIAS (status === 'clean' y current_wears < max_wears)
-// - El perfil del usuario (Default equilibrado o Personalizado por día/estilo)
-// - El pronóstico del clima local de 7 días (Open-Meteo)
+// La llave CLAUDE_API_KEY vive exclusivamente en Supabase Secrets (Deno.env).
 // ============================================================================
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-claude-key',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
 };
 
 serve(async (req: Request) => {
@@ -23,18 +21,22 @@ serve(async (req: Request) => {
       garments = [],
       profile = {},
       weatherForecast = [],
-      claudeApiKey = Deno.env.get('CLAUDE_API_KEY') || req.headers.get('x-claude-key') || '',
-      claudeModel = Deno.env.get('CLAUDE_MODEL') || 'claude-haiku-4-5-20251001',
     } = await req.json();
+
+    const claudeApiKey = Deno.env.get('CLAUDE_API_KEY') || '';
+    const claudeModel =
+      Deno.env.get('CLAUDE_MODEL') || 'claude-haiku-4-5-20251001';
 
     if (!claudeApiKey) {
       return new Response(
-        JSON.stringify({ error: 'Falta CLAUDE_API_KEY para generar el plan semanal' }),
+        JSON.stringify({
+          error:
+            'Falta configurar el secret CLAUDE_API_KEY en Supabase Edge Functions',
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Filtrar solo prendas limpias disponibles para usar
     const cleanGarments = garments.filter(
       (g: any) => g.status === 'clean' && g.current_wears < g.max_wears_before_wash
     );

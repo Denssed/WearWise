@@ -247,82 +247,35 @@ export default function ProfileAndApiScreen() {
             </View>
           ) : null}
 
-          {/* CONFIGURACIÓN DE LLAVES API: REPLICATE (851-LABS) + CLAUDE HAIKU 5.5 + SUPABASE */}
+          {/* CONEXIÓN CON SUPABASE CLOUD (DONDE VIVEN TUS LLAVES DE REPLICATE Y CLAUDE) */}
           <View style={styles.sectionCard}>
             <View style={styles.apiHeaderRow}>
               <Ionicons
-                name="key-outline"
+                name="cloud-done-outline"
                 size={18}
-                color={SOFT_TACTILE.colors.terracotta}
+                color={SOFT_TACTILE.colors.sage}
               />
               <Text style={styles.sectionHeader}>
-                Conexión de APIs (Replicate 851-labs + Claude Haiku 5.5)
+                Conexión Segura con Supabase Cloud
               </Text>
             </View>
             <Text style={styles.apiHelperText}>
-              Pega aquí tu token de Replicate (para 851-labs/background-remover) y tu API
-              Key de Claude Haiku (o configúralos en .env / Supabase Edge Functions).
+              Tus llaves privadas de Replicate (851-labs/background-remover) y Claude
+              Haiku 5.5 están protegidas en Supabase Edge Function Secrets y nunca se
+              exponen en el teléfono.
             </Text>
 
-            <Text style={styles.fieldLabel}>
-              Replicate API Token (851-labs/background-remover)
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={apiSettings.replicateApiToken}
-              onChangeText={(v) => updateApiSettings({ replicateApiToken: v.trim() })}
-              placeholder="r8_..."
-              placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>
-              Versión del Modelo Replicate (851-labs/background-remover)
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={apiSettings.replicateBgVersion}
-              onChangeText={(v) => updateApiSettings({ replicateBgVersion: v.trim() })}
-              placeholder="a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc"
-              placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>
-              Claude API Key (Anthropic — Haiku 5.5)
-            </Text>
-            <TextInput
-              style={styles.input}
-              value={apiSettings.claudeApiKey}
-              onChangeText={(v) => updateApiSettings({ claudeApiKey: v.trim() })}
-              placeholder="sk-ant-api03-..."
-              placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>Modelo de Claude</Text>
-            <TextInput
-              style={styles.input}
-              value={apiSettings.claudeModel}
-              onChangeText={(v) => updateApiSettings({ claudeModel: v.trim() })}
-              placeholder="claude-haiku-4-5-20251001"
-              placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>Supabase Project URL (Opcional)</Text>
+            <Text style={styles.fieldLabel}>Supabase Project URL</Text>
             <TextInput
               style={styles.input}
               value={apiSettings.supabaseUrl}
               onChangeText={(v) => updateApiSettings({ supabaseUrl: v.trim() })}
-              placeholder="https://xyz.supabase.co"
+              placeholder="https://tu-proyecto.supabase.co"
               placeholderTextColor={SOFT_TACTILE.colors.textMuted}
               autoCapitalize="none"
             />
 
-            <Text style={styles.fieldLabel}>Supabase Anon Key (Opcional)</Text>
+            <Text style={styles.fieldLabel}>Supabase Public Anon Key</Text>
             <TextInput
               style={styles.input}
               value={apiSettings.supabaseAnonKey}

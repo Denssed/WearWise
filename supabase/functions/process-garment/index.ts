@@ -1,17 +1,22 @@
 // ============================================================================
 // SUPABASE EDGE FUNCTION: process-garment
-// 1. Recibe la imagen de la prenda (base64 o data URI)
-// 2. Llama a Replicate (modelo 851-labs/background-remover) para quitar el fondo
-// 3. Llama a Claude Haiku 5.5 Vision para auto-etiquetar categoría, color,
-//    tela, grupo de lavado y máximo de puestas antes de lavar.
+// Las llaves REPLICATE_API_TOKEN y CLAUDE_API_KEY viven de forma 100% segura
+// en Supabase Secrets (Deno.env) y NUNCA se exponen en la app móvil.
+//
+// Flujo:
+// 1. Recibe { imageBase64, mimeType, userId? } desde la app Expo
+// 2. Llama a Replicate (851-labs/background-remover) usando REPLICATE_API_TOKEN
+// 3. Sube el PNG recortado al bucket 'garments' de Supabase Storage
+// 4. Llama a Claude Haiku 5.5 Vision usando CLAUDE_API_KEY para auto-etiquetar
 // ============================================================================
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.48.1';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type, x-replicate-token, x-claude-key',
+    'authorization, x-client-info, apikey, content-type',
 };
 
 const DEFAULT_851LABS_VERSION =
@@ -20,10 +25,7 @@ const DEFAULT_851LABS_VERSION =
 interface ProcessGarmentRequest {
   imageBase64: string;
   mimeType?: string;
-  replicateApiToken?: string;
-  replicateBgVersion?: string;
-  claudeApiKey?: string;
-  claudeModel?: string;
+  userId?: string;
 }
 
 serve(async (req: Request) => {
@@ -33,19 +35,15 @@ serve(async (req: Request) => {
 
   try {
     const body: ProcessGarmentRequest = await req.json();
-    const {
-      imageBase64,
-      mimeType = 'image/jpeg',
-      replicateApiToken =
-        Deno.env.get('REPLICATE_API_TOKEN') ||
-        req.headers.get('x-replicate-token') ||
-        '',
-      replicateBgVersion =
-        Deno.env.get('REPLICATE_BG_VERSION') || DEFAULT_851LABS_VERSION,
-      claudeApiKey =
-        Deno.env.get('CLAUDE_API_KEY') || req.headers.get('x-claude-key') || '',
-      claudeModel = Deno.env.get('CLAUDE_MODEL') || 'claude-haiku-4-5-20251001',
-    } = body;
+    const { imageBase64, mimeType = 'image/jpeg', userId = 'anon' } = body;
+
+    // Secretos leídos exclusivamente desde Supabase Edge Function Secrets
+    const replicateApiToken = Deno.env.get('REPLICATE_API_TOKEN') || '';
+    const replicateBgVersion =
+      Deno.env.get('REPLICATE_BG_VERSION') || DEFAULT_851LABS_VERSION;
+    const claudeApiKey = Deno.env.get('CLAUDE_API_KEY') || '';
+    const claudeModel =
+      Deno.env.get('CLAUDE_MODEL') || 'claude-haiku-4-5-20251001';
 
     if (!imageBase64) {
       return new Response(JSON.stringify({ error: 'Se requiere imageBase64' }), {
@@ -59,8 +57,6 @@ serve(async (req: Request) => {
 
     // ------------------------------------------------------------------------
     // PASO 1: Quitar el fondo con Replicate (851-labs/background-remover)
-    // Usa el header Prefer: wait=60 para respuesta síncrona rápida (~1 seg)
-    // y hace polling automático si la predicción sigue en curso.
     // ------------------------------------------------------------------------
     let cutoutImageUrl = dataUri;
     let bgRemovalProvider = 'original_fallback';
@@ -93,7 +89,6 @@ serve(async (req: Request) => {
         if (createRes.ok) {
           let prediction = await createRes.json();
 
-          // Si aún no terminó con Prefer: wait, hacer polling corto en urls.get
           let attempts = 0;
           while (
             prediction &&
@@ -116,20 +111,52 @@ serve(async (req: Request) => {
           }
 
           if (prediction?.status === 'succeeded' && prediction.output) {
-            const outputUrl = Array.isArray(prediction.output)
+            const replicateOutputUrl = Array.isArray(prediction.output)
               ? prediction.output[0]
               : prediction.output;
-            if (typeof outputUrl === 'string' && outputUrl.length > 0) {
-              cutoutImageUrl = outputUrl;
+
+            if (typeof replicateOutputUrl === 'string' && replicateOutputUrl.length > 0) {
+              cutoutImageUrl = replicateOutputUrl;
               bgRemovalProvider = 'replicate_851labs';
+
+              // --------------------------------------------------------------
+              // PASO 1.B: Guardar el PNG transparente en Supabase Storage
+              // para que la URL sea permanente en el bucket 'garments'
+              // --------------------------------------------------------------
+              const supabaseUrl = Deno.env.get('SUPABASE_URL');
+              const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+              if (supabaseUrl && supabaseServiceKey) {
+                try {
+                  const pngRes = await fetch(replicateOutputUrl);
+                  if (pngRes.ok) {
+                    const pngBlob = await pngRes.arrayBuffer();
+                    const adminClient = createClient(supabaseUrl, supabaseServiceKey);
+                    const filePath = `${userId}/cutout-${Date.now()}.png`;
+                    const { error: uploadErr } = await adminClient.storage
+                      .from('garments')
+                      .upload(filePath, pngBlob, {
+                        contentType: 'image/png',
+                        upsert: true,
+                      });
+
+                    if (!uploadErr) {
+                      const { data: pubData } = adminClient.storage
+                        .from('garments')
+                        .getPublicUrl(filePath);
+                      if (pubData?.publicUrl) {
+                        cutoutImageUrl = pubData.publicUrl;
+                      }
+                    }
+                  }
+                } catch (storageErr) {
+                  console.warn('No se pudo persistir en Storage, usando URL de Replicate:', storageErr);
+                }
+              }
             }
           }
         }
       } catch (err) {
-        console.warn(
-          'Replicate 851-labs warning (usando imagen original como respaldo):',
-          err
-        );
+        console.warn('Replicate 851-labs warning:', err);
       }
     }
 
@@ -139,7 +166,8 @@ serve(async (req: Request) => {
     if (!claudeApiKey) {
       return new Response(
         JSON.stringify({
-          error: 'Falta CLAUDE_API_KEY para analizar la prenda',
+          error:
+            'Falta configurar el secret CLAUDE_API_KEY en Supabase Edge Functions',
           cutoutImageUrl,
           bgRemovalProvider,
         }),
