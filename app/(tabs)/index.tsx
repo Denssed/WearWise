@@ -104,7 +104,7 @@ export default function WeeklyPlannerScreen() {
               </View>
             </View>
             <Text style={styles.subtitle} numberOfLines={1}>
-              Hola, {profile.displayName} · Curaduría por Claude Haiku 5.5
+              Hola, {profile.displayName} · Estilista Personal IA
             </Text>
           </View>
 
@@ -211,7 +211,7 @@ export default function WeeklyPlannerScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* RESUMEN EDITORIAL DE CLAUDE */}
+        {/* RESUMEN EDITORIAL DEL ESTILISTA */}
         {weeklyPlan?.claudeSummary ? (
           <View style={styles.aiSummaryBox}>
             <View style={styles.aiSummaryHeader}>
@@ -221,11 +221,7 @@ export default function WeeklyPlannerScreen() {
                 color={SOFT_TACTILE.colors.terracotta}
               />
               <Text style={styles.aiSummaryTitle} numberOfLines={1}>
-                Nota del Estilista (
-                {weeklyPlan.generatedBy === 'claude_haiku'
-                  ? 'Claude Haiku 5.5'
-                  : 'Curaduría Local'}
-                )
+                Nota de tu Estilista Personal
               </Text>
             </View>
             <Text style={styles.aiSummaryText}>{weeklyPlan.claudeSummary}</Text>

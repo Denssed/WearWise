@@ -35,12 +35,10 @@ const SCHEDULE_LABELS: { key: keyof WeeklySchedule; label: string }[] = [
   { key: 'sunday', label: 'Domingo' },
 ];
 
-export default function ProfileAndApiScreen() {
+export default function ProfileScreen() {
   const {
     profile,
-    apiSettings,
     updateProfile,
-    updateApiSettings,
     regenerateWeeklyPlan,
   } = useWardrobe();
 
@@ -76,10 +74,10 @@ export default function ProfileAndApiScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Perfil de Estilo & APIs</Text>
+          <Text style={styles.title}>Mi Perfil de Estilo</Text>
           <Text style={styles.subtitle}>
-            Elige entre el Perfil Default inteligente o personaliza las reglas de estilo y
-            agenda que Claude Haiku 5.5 usará cada semana.
+            Elige entre el Perfil Default equilibrado o personaliza tus reglas de estilo,
+            clima y agenda para tus sugerencias semanales.
           </Text>
 
           {/* SELECTOR DE MODO DE PERFIL SOFT TACTILE */}
@@ -161,6 +159,38 @@ export default function ProfileAndApiScreen() {
             </TouchableOpacity>
           </View>
 
+          {/* DATOS BÁSICOS DEL USUARIO */}
+          <View style={styles.sectionCard}>
+            <Text style={styles.sectionHeader}>Datos Personales y Ubicación</Text>
+
+            <View style={styles.twoColRow}>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.fieldLabel} numberOfLines={1}>
+                  Tu Nombre
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={profile.displayName}
+                  onChangeText={(txt) => updateProfile({ displayName: txt })}
+                  placeholder="Tu nombre"
+                  placeholderTextColor={SOFT_TACTILE.colors.textMuted}
+                />
+              </View>
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={styles.fieldLabel} numberOfLines={1}>
+                  Ciudad para el Clima
+                </Text>
+                <TextInput
+                  style={styles.input}
+                  value={profile.cityName}
+                  onChangeText={(txt) => updateProfile({ cityName: txt })}
+                  placeholder="Ej. Ciudad de México"
+                  placeholderTextColor={SOFT_TACTILE.colors.textMuted}
+                />
+              </View>
+            </View>
+          </View>
+
           {profile.profileMode === 'custom' ? (
             <View style={styles.sectionCard}>
               <Text style={styles.sectionHeader}>
@@ -215,7 +245,7 @@ export default function ProfileAndApiScreen() {
               </View>
 
               <Text style={styles.fieldLabel}>
-                Agenda Semanal por Día (guía para Claude)
+                Agenda Semanal por Día
               </Text>
               {SCHEDULE_LABELS.map((day) => (
                 <View key={day.key} style={styles.scheduleRow}>
@@ -240,7 +270,7 @@ export default function ProfileAndApiScreen() {
               ))}
 
               <Text style={styles.fieldLabel}>
-                Instrucciones extra para tu Estilista Claude Haiku
+                Notas extra para tu Estilista Personal
               </Text>
               <TextInput
                 style={[styles.input, { minHeight: 68 }]}
@@ -252,46 +282,6 @@ export default function ProfileAndApiScreen() {
               />
             </View>
           ) : null}
-
-          {/* CONEXIÓN CON SUPABASE CLOUD (DONDE VIVEN TUS LLAVES DE REPLICATE Y CLAUDE) */}
-          <View style={styles.sectionCard}>
-            <View style={styles.apiHeaderRow}>
-              <Ionicons
-                name="cloud-done-outline"
-                size={18}
-                color={SOFT_TACTILE.colors.sage}
-              />
-              <Text style={styles.sectionHeader}>
-                Conexión Segura con Supabase Cloud
-              </Text>
-            </View>
-            <Text style={styles.apiHelperText}>
-              Tus llaves privadas de Replicate (851-labs/background-remover) y Claude
-              Haiku 5.5 están protegidas en Supabase Edge Function Secrets y nunca se
-              exponen en el teléfono.
-            </Text>
-
-            <Text style={styles.fieldLabel}>Supabase Project URL</Text>
-            <TextInput
-              style={styles.input}
-              value={apiSettings.supabaseUrl}
-              onChangeText={(v) => updateApiSettings({ supabaseUrl: v.trim() })}
-              placeholder="https://tu-proyecto.supabase.co"
-              placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              autoCapitalize="none"
-            />
-
-            <Text style={styles.fieldLabel}>Supabase Public Anon Key</Text>
-            <TextInput
-              style={styles.input}
-              value={apiSettings.supabaseAnonKey}
-              onChangeText={(v) => updateApiSettings({ supabaseAnonKey: v.trim() })}
-              placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6..."
-              placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-            />
-          </View>
 
           <TouchableOpacity
             style={styles.saveApplyBtn}
@@ -397,21 +387,11 @@ const styles = StyleSheet.create({
     color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 15.5,
     fontWeight: '800',
-    flex: 1,
-    minWidth: 0,
-    flexShrink: 1,
+    marginBottom: 2,
   },
-  apiHeaderRow: {
+  twoColRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 6,
-  },
-  apiHelperText: {
-    color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 12,
-    lineHeight: 17,
-    marginBottom: 8,
+    gap: 10,
   },
   fieldLabel: {
     color: SOFT_TACTILE.colors.textPrimary,

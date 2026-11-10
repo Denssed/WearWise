@@ -111,7 +111,7 @@ export default function AddGarmentScreen() {
       setSourceImageUri(asset.uri);
       setIsProcessing(true);
       setPipelineStage(
-        '1/2 Quitando fondo con Replicate (851-labs) · 2/2 Auto-etiquetando con Claude Haiku 5.5...'
+        '1/2 Recortando el fondo de la prenda · 2/2 Analizando tela y cuidado textil...'
       );
 
       const aiResult = await processGarmentWithAI(
@@ -122,16 +122,8 @@ export default function AddGarmentScreen() {
       );
 
       setCutoutImageUri(aiResult.cutoutImageUrl);
-      setBgEngineUsed(
-        aiResult.bgRemovalProvider === 'replicate_851labs'
-          ? 'Replicate 851-labs Cutout'
-          : 'Recorte Inteligente'
-      );
-      setAiEngineUsed(
-        aiResult.aiProvider === 'claude_haiku'
-          ? 'Claude Haiku 5.5 Vision'
-          : 'Auto-Tag Inteligente'
-      );
+      setBgEngineUsed('Fondo Transparente');
+      setAiEngineUsed('Análisis Textil IA');
 
       setName(aiResult.name);
       setCategory(aiResult.category);
@@ -151,8 +143,8 @@ export default function AddGarmentScreen() {
   const handleLoadSample = (sample: (typeof DEMO_SAMPLES)[0]) => {
     setSourceImageUri(sample.uri);
     setCutoutImageUri(sample.uri);
-    setBgEngineUsed('Replicate 851-labs (Demo)');
-    setAiEngineUsed('Claude Haiku 5.5 Vision');
+    setBgEngineUsed('Fondo Transparente');
+    setAiEngineUsed('Análisis Textil IA');
     setName(sample.preset.name);
     setCategory(sample.preset.category);
     setSubcategory(sample.preset.subcategory);
@@ -211,8 +203,8 @@ export default function AddGarmentScreen() {
         >
           <Text style={styles.title}>Digitalizar Nueva Prenda</Text>
           <Text style={styles.subtitle}>
-            Replicate (851-labs/background-remover) quita el fondo en ~1 segundo y Claude
-            Haiku 5.5 clasifica la tela, el grupo de lavado y cuántos usos aguanta.
+            Toma o sube una foto de tu prenda: quitamos el fondo automáticamente y
+            detectamos la tela, el grupo de lavado y cuántos usos rinde.
           </Text>
 
           {/* BOTONES TÁCTILES DE CÁMARA Y GALERÍA */}
@@ -253,7 +245,7 @@ export default function AddGarmentScreen() {
           {/* PRUEBA RÁPIDA EN SIMULADOR */}
           <View style={styles.demoStrip}>
             <Text style={styles.demoStripLabel}>
-              Prueba rápida en simulador (Soft Tactile):
+              Muestras rápidas para probar el escáner:
             </Text>
             <View style={styles.demoBtnsRow}>
               {DEMO_SAMPLES.map((s) => (
@@ -382,7 +374,7 @@ export default function AddGarmentScreen() {
               </View>
 
               <Text style={styles.fieldLabel}>
-                Tanda de Lavandería (Sugerida por Claude)
+                Tanda de Lavandería Sugerida
               </Text>
               <View style={styles.pillsWrap}>
                 {(Object.keys(WASH_GROUP_INFO) as WashCareGroup[]).map((grp) => {

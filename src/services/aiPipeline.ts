@@ -125,7 +125,7 @@ export async function generateWeeklyOutfitsWithAI(
           profileModeUsed: profile.profileMode,
           claudeSummary:
             data.claudeSummary ||
-            'Plan semanal optimizado por Claude Haiku 5.5 desde Supabase Edge Functions.',
+            'Plan semanal optimizado según el pronóstico del clima y las puestas disponibles.',
           days: data.days,
           generatedBy: 'claude_haiku',
           createdAt: new Date().toISOString(),
