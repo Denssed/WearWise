@@ -1,0 +1,52 @@
+{
+  "expo": {
+    "name": "WearWise",
+    "slug": "wearwise",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "wearwise",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.denssed.wearwise",
+      "infoPlist": {
+        "NSCameraUsageDescription": "WearWise necesita acceso a la cámara para fotografiar tus prendas, quitarles el fondo y agregarlas a tu armario inteligente.",
+        "NSPhotoLibraryUsageDescription": "WearWise necesita acceso a tu galería para subir fotos de tu ropa y organizarlas.",
+        "NSLocationWhenInUseUsageDescription": "WearWise usa tu ubicación para consultar el clima semanal y recomendarte outfits adecuados para la temperatura y lluvia."
+      }
+    },
+    "android": {
+      "package": "com.denssed.wearwise",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Permite a WearWise acceder a tus fotos para digitalizar tu armario.",
+          "cameraPermission": "Permite a WearWise usar la cámara para escanear tus prendas."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Permite a WearWise conocer el clima local para sugerirte qué vestir esta semana."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
