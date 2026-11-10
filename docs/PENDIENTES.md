@@ -1,69 +1,48 @@
 # Checklist de Pendientes y Estado del Proyecto — WearWise
 
-Documento de control para llevar el seguimiento de lo que **ya está activo** en producción/desarrollo y los **pendientes externos** (como Google OAuth, Apple Developer y SMTP).
+Documento de control actualizado tras ejecutar todas las tareas automatizables de [`docs/ANTIGRAVITY_TASKS.md`](./ANTIGRAVITY_TASKS.md).
 
 ---
 
-## 1. Lo que YA está completado y activo
+## 1. Lo que YA está completado y verificado (Fases 0, 1, 2 y 3)
 
-- [x] **Proyecto Supabase (`WearWise`)**:
-  - **Ref**: `gnhsmapjozmxpmhtudgx`
-  - **URL**: `https://gnhsmapjozmxpmhtudgx.supabase.co`
-- [x] **Base de datos y Storage**:
-  - Tablas `profiles`, `garments`, `weekly_plans`, `wear_logs` con políticas RLS activas ([`001_initial_schema.sql`](../supabase/migrations/001_initial_schema.sql)).
-  - Bucket público `garments` creado con políticas de lectura/escritura por carpeta `{uid}/`.
-- [x] **Edge Functions desplegadas (`ACTIVE`)**:
-  - `process-garment` (`verify_jwt: false`) — recorte de fondo y análisis textil IA.
-  - `generate-weekly-plan` (`verify_jwt: false`) — generación del plan semanal de 7 días.
-  - `delete-account` (`verify_jwt: true`) — borrado definitivo de archivos y cuenta del usuario.
-- [x] **Secrets en Supabase Edge Functions**:
-  - `REPLICATE_API_TOKEN`, `REPLICATE_BG_VERSION`, `CLAUDE_API_KEY`, `CLAUDE_MODEL` guardados en el servidor (ocultos de la app móvil).
-- [x] **Configuración base de Auth en Supabase**:
-  - `site_url`: `wearwise://auth-callback`
-  - **Redirect URLs**: `wearwise://auth-callback` y `exp://**`
-  - **Email Auth**: Activo con confirmación de correo (`Confirm email` activado).
-  - **Apple Sign-In (lado Supabase)**: Activo con Client ID `com.denssed.wearwise`.
+- [x] **Tarea 0 — Entorno y Calidad de Código**:
+  - `npm install --legacy-peer-deps`, `npm run typecheck` (0 errores), `npm run lint` (0 errores), `npm test` (5 archivos, 32 tests pasando).
+  - Archivo `.env` configurado con `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
+- [x] **Tarea 1 — Migraciones SQL (`001`, `002`, `003`)**:
+  - `001_initial_schema.sql`: Tablas `profiles`, `garments`, `weekly_plans`, `wear_logs` activas.
+  - `002_security_and_quotas.sql`: Tabla `ai_usage` con RLS activada y 0 políticas públicas; funciones `consume_ai_quota` y `refund_ai_quota` restringidas exclusivamente a `service_role`; políticas de Storage restringidas a la carpeta `{uid}/` y bucket `garments` limitado a 5 MB (`5242880` bytes) y `{image/png, image/jpeg, image/webp}`.
+  - `003_garment_resilience.sql`: Columnas `cutout_status` (`'none'`) y `analysis_source` (`'manual'`) en `garments`; constraint `ai_usage_kind_check` ampliado a `('analyze', 'plan', 'cutout')`.
+- [x] **Tarea 2.1, 2.2 y 2.4 — Auth en Supabase**:
+  - Redirect URLs: `wearwise://auth-callback` y `exp://**`.
+  - Email Auth: Activo, `Confirm email` activado (`mailer_autoconfirm = false`), `password_min_length = 8`.
+  - Apple Provider (lado Supabase): Activo con Client ID `com.denssed.wearwise`.
+- [x] **Tarea 3 — Secretos y Edge Functions (Fase 3)**:
+  - Secretos configurados: `CLAUDE_API_KEY`, `REPLICATE_API_TOKEN`, `CLAUDE_MODEL=claude-haiku-5-5`, `QUOTA_ANALYZE_PER_DAY=20`, `QUOTA_PLAN_PER_DAY=3`, `QUOTA_CUTOUT_PER_DAY=30`, `MAX_IMAGE_BYTES=2500000`.
+  - 4 funciones desplegadas (`ACTIVE`): `analyze-garment`, `remove-background`, `generate-weekly-plan`, `delete-account`.
+  - Función obsoleta `process-garment` eliminada.
+- [x] **Tareas 4 y 6.1–6.3 — Pruebas de humo de Seguridad, Cuotas, Storage y Borrado**:
+  - Verificadas respuestas `401 unauthorized`, `400 invalid_request`, bloqueo RLS `403 AccessDenied` en carpeta ajena, reembolso automático de cuota en `502 ai_unavailable`, bloqueo `429 quota_exceeded` al superar el límite diario, y borrado en cascada con `delete-account`.
 
 ---
 
-## 2. Pendientes por configurar
+## 2. Pendientes que requieren credenciales o acción manual del usuario (👤)
 
-### A. Google OAuth (Prioridad Alta para Login con Google)
+### A. Tarea 2.3 — Google OAuth (BLOQUEADA por credenciales de Google Cloud)
 - [ ] **1. Crear credenciales en Google Cloud Console**:
   1. Ir a [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials).
-  2. Configurar la pantalla de consentimiento OAuth (*OAuth consent screen*) con el nombre **WearWise**.
-  3. Crear credenciales → **ID de cliente de OAuth** → Tipo **Aplicación web**.
-  4. En **URI de redirección autorizados**, agregar exactamente:
+  2. Configurar la pantalla de consentimiento OAuth (*OAuth consent screen*).
+  3. Crear **ID de cliente de OAuth** tipo **Aplicación web**.
+  4. En **URI de redirección autorizados**, agregar:
      ```text
      https://gnhsmapjozmxpmhtudgx.supabase.co/auth/v1/callback
      ```
 - [ ] **2. Activar Google en Supabase**:
-  - Copiar el **Client ID** y el **Client Secret** generados por Google.
-  - Pegarlos en *Supabase → Authentication → Providers → Google* (o compartirlos en el chat para inyectarlos vía API).
+  - Pegar `Client ID` y `Client Secret` en *Supabase → Authentication → Providers → Google* (o compartirlos en el chat para inyectarlos por API).
 
----
+### B. Tarea 2.4 (parte Apple Developer) y 5.2 — Apple Sign-In & EAS Development Builds
+- [ ] Activar la capacidad **Sign In with Apple** para `com.denssed.wearwise` en el portal de *Apple Developer*.
+- [ ] Ejecutar `npx eas login`, definir variables con `npx eas env:create` y generar los builds de desarrollo (`npx eas build --profile development --platform android|ios`).
 
-### B. Apple Sign-In en iOS (Solo requerido para publicar en App Store / probar en iPhone nativo)
-- [ ] **1. Cuenta de Apple Developer**:
-  - En *Certificates, Identifiers & Profiles → Identifiers*, registrar el App ID `com.denssed.wearwise` y marcar la casilla **Sign In with Apple**.
-- [ ] **2. Development Build con EAS**:
-  - El botón de Apple solo aparece en iOS y requiere compilar un build de desarrollo (`eas build --profile development --platform ios`), ya que no corre dentro de Expo Go estándar.
-- [ ] **3. Revocación de token Apple al eliminar cuenta (Producción)**:
-  - Generar llave privada `.p8` de Sign In with Apple para revocar el token de Apple dentro de [`supabase/functions/delete-account/index.ts`](../supabase/functions/delete-account/index.ts) antes de enviar la app a revisión final del App Store.
-
----
-
-### C. Correo SMTP Propio y Plantillas en Español (Prioridad Media — antes de lanzamiento público)
-- [ ] **1. Configurar Custom SMTP en Supabase**:
-  - El servidor de correo gratuito por defecto de Supabase tiene un límite de ~2–4 correos por hora y no permite editar las plantillas HTML en el plan Free.
-  - Conectar un proveedor SMTP (ej. **Resend**, **SendGrid**, **Postmark** o **AWS SES**) en *Supabase → Project Settings → Authentication → SMTP Settings*.
-- [ ] **2. Aplicar plantillas de correo en español**:
-  - Una vez activo el SMTP propio, traducir los asuntos y cuerpos de *Confirm signup* y *Reset password* en *Authentication → Email Templates*.
-
----
-
-### D. Builds de Producción y Tiendas (Fase de Lanzamiento)
-- [ ] **1. Variables de entorno en EAS**:
-  - Ejecutar `eas env:create` para registrar `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_ANON_KEY` en los servidores de Expo Application Services.
-- [ ] **2. Icono, Splash Screen y Capturas de Tienda**:
-  - Reemplazar los assets de icono/splash definitivos en `app.json` antes de correr `eas build --profile production`.
+### C. Tareas 5.3 y 6.4 — Pruebas manuales en dispositivo físico
+- [ ] Probar el checklist manual de login, modo avión (resiliencia offline al agregar prenda), edición de prenda y recorte de fondo desde el teléfono.
