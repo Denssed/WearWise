@@ -1,95 +1,12 @@
 import { newId } from '../utils/id';
 import {
   Garment,
-  GarmentCategory,
   PlannedDayOutfit,
-  Season,
   UserProfile,
-  WashCareGroup,
   WeatherDay,
   WeeklyPlan,
 } from '../types/wardrobe';
 import { getSupabaseClient } from './supabase';
-
-export interface GarmentAIAnalysisResult {
-  cutoutImageUrl: string;
-  bgRemovalProvider: 'replicate_851labs' | 'edge_function' | 'local_preview';
-  aiProvider: 'claude_haiku' | 'smart_fallback';
-  name: string;
-  category: GarmentCategory;
-  subcategory: string;
-  colors: string[];
-  pattern: string;
-  fabric: string;
-  seasons: Season[];
-  formality: number;
-  wash_care_group: WashCareGroup;
-  care_instructions: string;
-  max_wears_before_wash: number;
-  ai_styling_notes: string;
-}
-
-/**
- * Envía la imagen a la Edge Function `process-garment` en Supabase.
- * Dentro de Supabase se leen los secretos `REPLICATE_API_TOKEN` (851-labs/background-remover)
- * y `CLAUDE_API_KEY` (Claude Haiku 5.5 Vision) sin exponerlos jamás en la app móvil.
- */
-export async function processGarmentWithAI(
-  imageUri: string,
-  imageBase64: string | null | undefined,
-  mimeType = 'image/jpeg'
-): Promise<GarmentAIAnalysisResult> {
-  const supabase = getSupabaseClient();
-
-  if (supabase && imageBase64) {
-    try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      const { data, error } = await supabase.functions.invoke('process-garment', {
-        body: {
-          imageBase64,
-          mimeType,
-          userId: user?.id || 'anon',
-        },
-      });
-
-      if (!error && data?.analysis) {
-        return {
-          cutoutImageUrl: data.cutoutImageUrl || imageUri,
-          bgRemovalProvider:
-            data.bgRemovalProvider === 'replicate_851labs'
-              ? 'replicate_851labs'
-              : 'edge_function',
-          aiProvider: 'claude_haiku',
-          ...data.analysis,
-        };
-      }
-    } catch (err) {
-      console.warn('Error invocando Edge Function process-garment en Supabase:', err);
-    }
-  }
-
-  // Fallback local inteligente mientras el proyecto Supabase se conecta
-  return {
-    cutoutImageUrl: imageUri,
-    bgRemovalProvider: 'local_preview',
-    aiProvider: 'smart_fallback',
-    name: 'Sobrecamisa Texturizada Terracota',
-    category: 'top',
-    subcategory: 'Camisa / Sobrecamisa',
-    colors: ['Terracota', 'Arena'],
-    pattern: 'texturizado',
-    fabric: 'Algodón Orgánico',
-    seasons: ['primavera', 'otoño', 'invierno'],
-    formality: 3,
-    wash_care_group: 'colors',
-    care_instructions: 'Lavar a máquina en frío (30°C) con colores similares.',
-    max_wears_before_wash: 3,
-    ai_styling_notes: 'Ideal sobre camiseta blanca básica con jeans oscuros o chinos arena.',
-  };
-}
 
 /**
  * Envía el catálogo de prendas limpias, perfil y clima a la Edge Function

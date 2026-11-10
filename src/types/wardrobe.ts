@@ -12,13 +12,28 @@ export type GarmentStatus = 'clean' | 'needs_wash';
 
 export type Season = 'primavera' | 'verano' | 'otoño' | 'invierno';
 
+/**
+ * Estado del recorte de fondo:
+ * - none: no se pidió (se muestra la foto original)
+ * - pending: en cola; se reintenta automáticamente cuando el servicio responde
+ * - done: `cutout_image_url` es el PNG sin fondo
+ * - failed: error no recuperable (el usuario puede reintentar a mano)
+ */
+export type CutoutStatus = 'none' | 'pending' | 'done' | 'failed';
+
+/** Cómo se rellenaron los datos de la prenda. */
+export type AnalysisSource = 'ai' | 'manual';
+
 export interface Garment {
   id: string;
   name: string;
   category: GarmentCategory;
   subcategory: string;
+  /** Imagen que se muestra. Es la foto original hasta que el recorte esté listo. */
   cutout_image_url: string;
   original_image_url?: string;
+  cutout_status: CutoutStatus;
+  analysis_source: AnalysisSource;
   colors: string[];
   pattern: string;
   fabric: string;

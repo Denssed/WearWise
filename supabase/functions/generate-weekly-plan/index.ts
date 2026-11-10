@@ -1,145 +1,147 @@
 // ============================================================================
-// SUPABASE EDGE FUNCTION: generate-weekly-plan
-// La llave CLAUDE_API_KEY vive exclusivamente en Supabase Secrets (Deno.env).
+// SUPABASE EDGE FUNCTION: generate-weekly-plan  (mejora OPCIONAL con IA)
+// El plan base se calcula en el dispositivo sin gastar tokens; esta función solo
+// se usa cuando el usuario pide "Mejorar con IA".
+//
+// Seguridad y costo:
+//  - Requiere JWT válido. Cuota diaria QUOTA_PLAN_PER_DAY (por defecto 3).
+//  - Catálogo compacto: máx. 120 prendas y solo los campos necesarios.
+//  - La respuesta se sanea: solo IDs reales y sin exceder los usos restantes.
 // ============================================================================
 
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import {
+  authenticate,
+  callClaudeJson,
+  consumeQuota,
+  envInt,
+  errorResponse,
+  jsonResponse,
+  preflight,
+  refundQuota,
+} from '../_shared/common.ts';
+import { sanitizePlan } from '../_shared/pure.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, apikey, content-type',
-};
+const MAX_GARMENTS = 120;
+const MAX_WEATHER_DAYS = 7;
 
-serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
+const SYSTEM_PROMPT = `Eres el estilista personal de IA de WearWise.
+Arma un plan de vestimenta de 7 días usando EXCLUSIVAMENTE los IDs del catálogo.
+
+REGLAS:
+1. No asignes una prenda más veces que su remaining (usos restantes) en la semana.
+2. Ajusta cada outfit a la temperatura y lluvia del día.
+3. Modo "default": Smart Casual / Casual moderno equilibrado. Modo "custom": respeta estilos, colores preferidos, sensibilidad al clima y la actividad de cada día.
+4. Cada día: 1 top y 1 bottom (o 1 one_piece), calzado si hay, y outerwear si hace frío o llueve.
+5. Responde SOLO con JSON:
+{"claudeSummary":"2 oraciones","days":[{"dayIndex":0,"dayName":"Lunes","date":"YYYY-MM-DD","occasion":"","outfitTitle":"","garmentIds":["id"],"stylingTip":"","weatherNote":""}]}`;
+
+function s(v: unknown, max: number): string {
+  return typeof v === 'string' ? v.slice(0, max) : '';
+}
+
+Deno.serve(async (req: Request) => {
+  const pre = preflight(req);
+  if (pre) return pre;
+  if (req.method !== 'POST') return errorResponse(req, 405, 'invalid_request', 'Método no permitido');
+
+  const auth = await authenticate(req);
+  if (!auth.ok) return auth.response;
+  const { userId, admin } = auth;
+
+  let body: { garments?: unknown; profile?: unknown; weatherForecast?: unknown };
+  try {
+    body = await req.json();
+  } catch {
+    return errorResponse(req, 400, 'invalid_request', 'JSON inválido');
   }
 
-  try {
-    const {
-      garments = [],
-      profile = {},
-      weatherForecast = [],
-    } = await req.json();
+  if (!Array.isArray(body.garments) || !Array.isArray(body.weatherForecast)) {
+    return errorResponse(req, 400, 'invalid_request', 'Faltan garments o weatherForecast');
+  }
 
-    const claudeApiKey = Deno.env.get('CLAUDE_API_KEY') || '';
-    const claudeModel =
-      Deno.env.get('CLAUDE_MODEL') || 'claude-haiku-4-5-20251001';
+  // Catálogo mínimo (menos tokens) y presupuesto de usos por prenda.
+  const remaining: Record<string, number> = {};
+  const catalog = body.garments
+    .filter((g): g is Record<string, unknown> => !!g && typeof g === 'object')
+    .filter(
+      (g) =>
+        typeof g.id === 'string' &&
+        g.status === 'clean' &&
+        Number(g.current_wears) < Number(g.max_wears_before_wash)
+    )
+    .slice(0, MAX_GARMENTS)
+    .map((g) => {
+      const left = Number(g.max_wears_before_wash) - Number(g.current_wears);
+      remaining[g.id as string] = left;
+      return {
+        id: g.id,
+        n: s(g.name, 60),
+        c: g.category,
+        col: Array.isArray(g.colors) ? g.colors.slice(0, 2) : [],
+        f: g.formality,
+        s: g.seasons,
+        remaining: left,
+      };
+    });
 
-    if (!claudeApiKey) {
-      return new Response(
-        JSON.stringify({
-          error:
-            'Falta configurar el secret CLAUDE_API_KEY en Supabase Edge Functions',
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+  if (catalog.length < 2) {
+    return errorResponse(req, 400, 'invalid_request', 'Se necesitan al menos 2 prendas limpias');
+  }
 
-    const cleanGarments = garments.filter(
-      (g: any) => g.status === 'clean' && g.current_wears < g.max_wears_before_wash
-    );
-
-    const compactCatalog = cleanGarments.map((g: any) => ({
-      id: g.id,
-      name: g.name,
-      category: g.category,
-      subcategory: g.subcategory,
-      colors: g.colors,
-      formality: g.formality,
-      seasons: g.seasons,
-      remainingWearsBeforeWash: g.max_wears_before_wash - g.current_wears,
+  const profile = (body.profile && typeof body.profile === 'object' ? body.profile : {}) as Record<
+    string,
+    unknown
+  >;
+  const compactProfile = {
+    mode: profile.profileMode === 'custom' ? 'custom' : 'default',
+    styles: Array.isArray(profile.styleArchetypes) ? profile.styleArchetypes.slice(0, 6) : [],
+    prefer: Array.isArray(profile.preferredColors) ? profile.preferredColors.slice(0, 8) : [],
+    avoid: Array.isArray(profile.avoidColors) ? profile.avoidColors.slice(0, 8) : [],
+    work: s(profile.workEnvironment, 30),
+    climate: s(profile.climateSensitivity, 20),
+    schedule: profile.weeklySchedule,
+    notes: s(profile.customPromptNotes, 300),
+  };
+  const weather = (body.weatherForecast as Record<string, unknown>[])
+    .slice(0, MAX_WEATHER_DAYS)
+    .map((w) => ({
+      date: w?.date,
+      day: w?.dayName,
+      min: w?.tempMin,
+      max: w?.tempMax,
+      rain: w?.rainProbability,
     }));
 
-    const systemPrompt = `Eres el estilista personal de IA de WearWise.
-Tu objetivo es armar un plan de vestimenta semanal (Lunes a Domingo, 7 días) usando EXCLUSIVAMENTE los IDs de las prendas limpias disponibles en el catálogo proporcionado.
-
-REGLAS ESTRICTAS:
-1. Respeta el límite de usos restantes (remainingWearsBeforeWash) de cada prenda a lo largo de la semana: no asignes una prenda más veces en la semana de lo que su contador remainingWearsBeforeWash permite.
-2. Ajusta cada outfit a la temperatura mínima/máxima y probabilidad de lluvia de ese día según weatherForecast.
-3. Si el perfil está en modo "default", crea un balance versátil Smart Casual / Casual moderno. Si está en modo "custom", respeta estrictamente los arquetipos de estilo, colores preferidos, sensibilidad al clima y la actividad de cada día de la semana.
-4. Cada día debe incluir al menos: 1 prenda superior ("top") y 1 inferior ("bottom") — o 1 "one_piece" — más calzado ("footwear") si existe en el catálogo, y "outerwear" si hace frío o llueve.
-5. Responde ÚNICAMENTE con un JSON válido con este formato exacto:
-{
-  "claudeSummary": "Resumen general de la estrategia de estilo y clima para esta semana (2 oraciones)",
-  "days": [
-    {
-      "dayIndex": 0,
-      "dayName": "Lunes",
-      "date": "YYYY-MM-DD",
-      "occasion": "Actividad del día",
-      "outfitTitle": "Nombre atractivo del look",
-      "garmentIds": ["id-1", "id-2", "id-3"],
-      "stylingTip": "Por qué funciona esta combinación y cómo llevarla",
-      "weatherNote": "Nota sobre cómo este look responde al clima del día"
-    }
-  ]
-}`;
-
-    const userMessage = JSON.stringify({
-      profileMode: profile.profileMode || 'default',
-      userProfile: profile,
-      weatherForecast7Days: weatherForecast,
-      availableCleanGarments: compactCatalog,
-    });
-
-    const modelsToTry = [
-      claudeModel,
-      'claude-haiku-4-5-20251001',
-      'claude-3-5-haiku-latest',
-    ];
-
-    let planResult = null;
-    let lastError = '';
-
-    for (const modelId of modelsToTry) {
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'x-api-key': claudeApiKey,
-          'anthropic-version': '2023-06-01',
-          'content-type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: modelId,
-          max_tokens: 2200,
-          temperature: 0.4,
-          system: systemPrompt,
-          messages: [
-            {
-              role: 'user',
-              content: `Genera el plan semanal de 7 outfits en JSON para estos datos:\n${userMessage}`,
-            },
-          ],
-        }),
+  const limit = envInt('QUOTA_PLAN_PER_DAY', 3);
+  try {
+    const quota = await consumeQuota(admin, userId, 'plan', limit);
+    if (!quota.allowed) {
+      return errorResponse(req, 429, 'quota_exceeded', 'Alcanzaste el límite diario de mejoras con IA', {
+        limit,
       });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawText = data?.content?.[0]?.text || '{}';
-        const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-        planResult = JSON.parse(jsonMatch ? jsonMatch[0] : rawText);
-        break;
-      } else {
-        lastError = await response.text();
-      }
     }
-
-    if (!planResult) {
-      return new Response(
-        JSON.stringify({ error: `Error en Claude API: ${lastError}` }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    return new Response(JSON.stringify(planResult), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : 'Error interno' }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+  } catch (e) {
+    console.error('Error consultando la cuota', e);
+    return errorResponse(req, 500, 'server_error', 'No se pudo verificar tu uso diario');
   }
+
+  const raw = await callClaudeJson({
+    system: SYSTEM_PROMPT,
+    maxTokens: 1800,
+    temperature: 0.4,
+    messages: [
+      {
+        role: 'user',
+        content: `Genera el plan.\n${JSON.stringify({ profile: compactProfile, weather, catalog })}`,
+      },
+    ],
+  });
+
+  const plan = sanitizePlan(raw, remaining);
+  if (!plan) {
+    await refundQuota(admin, userId, 'plan');
+    return errorResponse(req, 502, 'ai_unavailable', 'La IA no pudo generar un plan válido ahora');
+  }
+
+  return jsonResponse(req, plan);
 });

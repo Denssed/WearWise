@@ -32,6 +32,7 @@ function RootNavigator() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Protected guard={signedIn && !recovering}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="garment/[id]" />
         </Stack.Protected>
         <Stack.Protected guard={signedIn && recovering}>
           <Stack.Screen name="reset-password" />

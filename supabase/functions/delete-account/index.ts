@@ -6,25 +6,15 @@
 // - Requiere JWT válido: el usuario se toma SIEMPRE del token, nunca del body.
 // - Borra los archivos del usuario en Storage (bucket 'garments', carpeta {uid}/).
 // - Borra el usuario de auth.users; las tablas (profiles, garments, weekly_plans,
-//   wear_logs) se eliminan en cascada por sus llaves foráneas.
+//   wear_logs, ai_usage) se eliminan en cascada por sus llaves foráneas.
 // ============================================================================
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.48.1';
+import type { SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.48.1';
+import { authenticate, errorResponse, jsonResponse, preflight } from '../_shared/common.ts';
 
 const BUCKET = 'garments';
 
-function json(body: unknown, status = 200, origin = '*') {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      'Access-Control-Allow-Origin': origin,
-      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-      'Content-Type': 'application/json',
-    },
-  });
-}
-
-async function removeUserFiles(admin: ReturnType<typeof createClient>, userId: string) {
+async function removeUserFiles(admin: SupabaseClient, userId: string) {
   // Lista y borra por páginas hasta vaciar la carpeta del usuario.
   for (let i = 0; i < 50; i++) {
     const { data, error } = await admin.storage.from(BUCKET).list(userId, { limit: 100 });
@@ -37,31 +27,20 @@ async function removeUserFiles(admin: ReturnType<typeof createClient>, userId: s
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return json('ok');
-  if (req.method !== 'POST') return json({ error: 'Método no permitido' }, 405);
+  const pre = preflight(req);
+  if (pre) return pre;
+  if (req.method !== 'POST') return errorResponse(req, 405, 'invalid_request', 'Método no permitido');
 
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceKey) return json({ error: 'Servidor mal configurado' }, 500);
-
-  const token = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
-  if (!token) return json({ error: 'No autenticado' }, 401);
-
-  const admin = createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-
-  const { data: userData, error: userError } = await admin.auth.getUser(token);
-  if (userError || !userData?.user) return json({ error: 'Sesión inválida' }, 401);
-  const userId = userData.user.id;
+  const auth = await authenticate(req);
+  if (!auth.ok) return auth.response;
 
   try {
-    await removeUserFiles(admin, userId);
-    const { error: deleteError } = await admin.auth.admin.deleteUser(userId);
-    if (deleteError) throw deleteError;
-    return json({ ok: true });
+    await removeUserFiles(auth.admin, auth.userId);
+    const { error } = await auth.admin.auth.admin.deleteUser(auth.userId);
+    if (error) throw error;
+    return jsonResponse(req, { ok: true });
   } catch (e) {
     console.error('delete-account failed', e);
-    return json({ error: 'No se pudo eliminar la cuenta' }, 500);
+    return errorResponse(req, 500, 'server_error', 'No se pudo eliminar la cuenta');
   }
 });

@@ -1,10 +1,21 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { DEFAULT_USER_PROFILE } from '../data/initialWardrobe';
+import { AiServiceError } from '../services/aiErrors';
 import {
   buildSmartLocalWeeklyPlan,
   generateWeeklyOutfitsWithAI,
 } from '../services/aiPipeline';
+import { requestCutout } from '../services/garmentAI';
+import { uploadGarmentImage } from '../services/imageStorage';
 import {
   getSupabaseClient,
   saveWeeklyPlanToSupabase,
@@ -21,6 +32,7 @@ import {
   parseStoredProfile,
 } from '../storage/schemas';
 import {
+  CutoutStatus,
   Garment,
   UserProfile,
   WashCareGroup,
@@ -28,6 +40,32 @@ import {
   WeeklyPlan,
 } from '../types/wardrobe';
 import { newId } from '../utils/id';
+import { isLocalImageUri, storagePathFromPublicUrl } from '../utils/storagePath';
+
+/** Campos de una prenda que el usuario puede editar. */
+export type GarmentEditableFields = Partial<
+  Pick<
+    Garment,
+    | 'name'
+    | 'category'
+    | 'subcategory'
+    | 'colors'
+    | 'fabric'
+    | 'seasons'
+    | 'formality'
+    | 'wash_care_group'
+    | 'max_wears_before_wash'
+    | 'care_instructions'
+    | 'ai_styling_notes'
+    | 'is_favorite'
+  >
+>;
+
+export interface CutoutRequestResult {
+  status: CutoutStatus;
+  /** Mensaje para el usuario cuando no quedó listo. */
+  message?: string;
+}
 
 interface WardrobeContextValue {
   garments: Garment[];
@@ -38,6 +76,11 @@ interface WardrobeContextValue {
   isLoadingWeather: boolean;
   addGarment: (newGarment: Omit<Garment, 'id' | 'created_at'>) => Promise<Garment>;
   deleteGarment: (id: string) => Promise<void>;
+  updateGarment: (id: string, fields: GarmentEditableFields) => Promise<void>;
+  /** Marca la prenda para recorte de fondo y lo intenta ahora. */
+  requestCutoutFor: (id: string) => Promise<CutoutRequestResult>;
+  /** Sube fotos pendientes y reintenta recortes en cola (se llama sola al abrir la app y al agregar prendas). */
+  processBackgroundWork: () => Promise<void>;
   updateGarmentMaxWears: (id: string, maxWears: number) => Promise<void>;
   logGarmentWear: (id: string, forceDirty?: boolean) => Promise<void>;
   logDayOutfitWear: (dayIndex: number, forceDirty?: boolean) => Promise<void>;
@@ -84,6 +127,140 @@ export const WardrobeProvider: React.FC<WardrobeProviderProps> = ({
   }
 
   const keys = useMemo(() => (userId ? storageKeys(userId) : null), [userId]);
+
+  const persistGarments = useCallback(
+    async (updated: Garment[]) => {
+      setGarments(updated);
+      if (keys) await AsyncStorage.setItem(keys.garments, JSON.stringify(updated));
+    },
+    [keys]
+  );
+
+  const persistPlan = useCallback(
+    async (plan: WeeklyPlan) => {
+      setWeeklyPlan(plan);
+      if (keys) await AsyncStorage.setItem(keys.weeklyPlan, JSON.stringify(plan));
+    },
+    [keys]
+  );
+
+  // Espejo síncrono de `garments` para el trabajo en segundo plano (evita leer un estado viejo entre awaits).
+  const garmentsRef = useRef<Garment[]>([]);
+  const workRunning = useRef(false);
+  useEffect(() => {
+    garmentsRef.current = garments;
+  }, [garments]);
+
+  /** Aplica cambios a una prenda, los guarda en el dispositivo y los sube a Supabase. */
+  const patchGarment = useCallback(
+    async (id: string, patch: Partial<Garment>) => {
+      const next = garmentsRef.current.map((g) => (g.id === id ? { ...g, ...patch } : g));
+      garmentsRef.current = next;
+      await persistGarments(next);
+      const updated = next.find((g) => g.id === id);
+      const supabase = getSupabaseClient();
+      if (supabase && updated) await upsertGarmentToSupabase(supabase, updated);
+    },
+    [persistGarments]
+  );
+
+  /**
+   * Un intento de recorte. 'done' = listo, 'failed' = error definitivo con esta imagen,
+   * 'retry' = reintentar más tarde; `stop` = no seguir con otras prendas (sin red, sin cuota, sin sesión).
+   */
+  const attemptCutout = useCallback(
+    async (
+      g: Garment
+    ): Promise<{ outcome: 'done' | 'failed' | 'retry'; stop: boolean; message?: string }> => {
+      const path = storagePathFromPublicUrl(g.original_image_url);
+      if (!path) {
+        return { outcome: 'retry', stop: false, message: 'La foto aún no se ha subido. Se intentará de nuevo.' };
+      }
+      try {
+        const url = await requestCutout(path);
+        await patchGarment(g.id, { cutout_image_url: url, cutout_status: 'done' });
+        return { outcome: 'done', stop: false };
+      } catch (e) {
+        if (e instanceof AiServiceError) {
+          if (e.code === 'invalid') {
+            await patchGarment(g.id, { cutout_status: 'failed' });
+            return { outcome: 'failed', stop: false, message: e.message };
+          }
+          return { outcome: 'retry', stop: true, message: e.message };
+        }
+        return { outcome: 'retry', stop: true, message: 'No pudimos quitar el fondo ahora.' };
+      }
+    },
+    [patchGarment]
+  );
+
+  /** Sube las fotos que solo existen en el dispositivo. Devuelve false si no hubo conexión. */
+  const uploadLocalImages = useCallback(async (): Promise<boolean> => {
+    if (!userId) return false;
+    const local = garmentsRef.current.filter(
+      (g) => isLocalImageUri(g.original_image_url) || isLocalImageUri(g.cutout_image_url)
+    );
+    for (const g of local) {
+      try {
+        const source = isLocalImageUri(g.original_image_url) ? g.original_image_url! : g.cutout_image_url;
+        const up = await uploadGarmentImage(userId, source);
+        await patchGarment(g.id, {
+          original_image_url: up.publicUrl,
+          cutout_image_url: isLocalImageUri(g.cutout_image_url) ? up.publicUrl : g.cutout_image_url,
+        });
+      } catch (e) {
+        console.warn('No se pudo subir la foto de una prenda (se reintentará):', e);
+        return false;
+      }
+    }
+    return true;
+  }, [userId, patchGarment]);
+
+  const processBackgroundWork = useCallback(async () => {
+    if (workRunning.current || !userId) return;
+    workRunning.current = true;
+    try {
+      await uploadLocalImages();
+      // Máximo 3 recortes por ejecución para no saturar la cuota ni la red.
+      const queue = garmentsRef.current.filter((g) => g.cutout_status === 'pending').slice(0, 3);
+      for (const g of queue) {
+        const result = await attemptCutout(g);
+        if (result.stop) break;
+      }
+    } finally {
+      workRunning.current = false;
+    }
+  }, [userId, uploadLocalImages, attemptCutout]);
+
+  const requestCutoutFor = useCallback(
+    async (id: string): Promise<CutoutRequestResult> => {
+      const garment = garmentsRef.current.find((g) => g.id === id);
+      if (!garment) return { status: 'none', message: 'No encontramos la prenda.' };
+
+      await patchGarment(id, { cutout_status: 'pending' });
+      if (!(await uploadLocalImages())) {
+        return { status: 'pending', message: 'Sin conexión. Intentaremos quitar el fondo cuando haya internet.' };
+      }
+      const current = garmentsRef.current.find((g) => g.id === id) ?? garment;
+      const result = await attemptCutout(current);
+      if (result.outcome === 'done') return { status: 'done' };
+      return {
+        status: result.outcome === 'failed' ? 'failed' : 'pending',
+        message:
+          result.outcome === 'retry'
+            ? `${result.message ?? 'No pudimos quitar el fondo ahora.'} Quedó en cola y se reintentará.`
+            : result.message,
+      };
+    },
+    [patchGarment, uploadLocalImages, attemptCutout]
+  );
+
+  const updateGarment = useCallback(
+    async (id: string, fields: GarmentEditableFields) => {
+      await patchGarment(id, fields);
+    },
+    [patchGarment]
+  );
 
   // Carga inicial por usuario: AsyncStorage (+ migración legacy) → Supabase → clima.
   useEffect(() => {
@@ -147,6 +324,10 @@ export const WardrobeProvider: React.FC<WardrobeProviderProps> = ({
           setWeeklyPlan(initialPlan);
           await AsyncStorage.setItem(keys.weeklyPlan, JSON.stringify(initialPlan));
         }
+
+        // Fotos sin subir y recortes en cola de sesiones anteriores.
+        garmentsRef.current = activeGarments;
+        if (!cancelled) void processBackgroundWork();
       } catch (e) {
         console.warn('Error cargando estado inicial de WearWise:', e);
         if (!cancelled) setIsLoadingWeather(false);
@@ -160,22 +341,6 @@ export const WardrobeProvider: React.FC<WardrobeProviderProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const persistGarments = useCallback(
-    async (updated: Garment[]) => {
-      setGarments(updated);
-      if (keys) await AsyncStorage.setItem(keys.garments, JSON.stringify(updated));
-    },
-    [keys]
-  );
-
-  const persistPlan = useCallback(
-    async (plan: WeeklyPlan) => {
-      setWeeklyPlan(plan);
-      if (keys) await AsyncStorage.setItem(keys.weeklyPlan, JSON.stringify(plan));
-    },
-    [keys]
-  );
-
   const addGarment = useCallback(
     async (newGarmentData: Omit<Garment, 'id' | 'created_at'>): Promise<Garment> => {
       const created: Garment = {
@@ -184,15 +349,18 @@ export const WardrobeProvider: React.FC<WardrobeProviderProps> = ({
         created_at: new Date().toISOString(),
       };
       const next = [created, ...garments];
+      garmentsRef.current = next;
       await persistGarments(next);
 
       const supabase = getSupabaseClient();
       if (supabase) {
         await upsertGarmentToSupabase(supabase, created);
       }
+      // Sube la foto si quedó pendiente y encola el recorte, sin bloquear al usuario.
+      void processBackgroundWork();
       return created;
     },
-    [garments, persistGarments]
+    [garments, persistGarments, processBackgroundWork]
   );
 
   const deleteGarment = useCallback(
@@ -378,6 +546,9 @@ export const WardrobeProvider: React.FC<WardrobeProviderProps> = ({
         isLoadingWeather,
         addGarment,
         deleteGarment,
+        updateGarment,
+        requestCutoutFor,
+        processBackgroundWork,
         updateGarmentMaxWears,
         logGarmentWear,
         logDayOutfitWear,

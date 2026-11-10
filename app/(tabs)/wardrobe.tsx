@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
   Image,
@@ -26,6 +27,7 @@ const CATEGORIES_FILTER: { key: 'all' | GarmentCategory; label: string }[] = [
 ];
 
 export default function WardrobeScreen() {
+  const router = useRouter();
   const {
     garments,
     logGarmentWear,
@@ -54,7 +56,7 @@ export default function WardrobeScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Mi Cápsula Digital</Text>
           <Text style={styles.subtitle} numberOfLines={2}>
-            {garments.length} prendas recortadas · Control táctil de frescura y lavadas
+            {garments.length} {garments.length === 1 ? 'prenda' : 'prendas'} · Control táctil de frescura y lavadas
           </Text>
         </View>
 
@@ -121,6 +123,19 @@ export default function WardrobeScreen() {
           contentContainerStyle={styles.gridContainer}
           showsVerticalScrollIndicator={false}
         >
+          {garments.length === 0 ? (
+            <View style={styles.emptyCard}>
+              <Ionicons name="shirt-outline" size={34} color={SOFT_TACTILE.colors.textMuted} />
+              <Text style={styles.emptyTitle}>Tu armario está vacío</Text>
+              <Text style={styles.emptyText}>
+                Agrega tu primera prenda con una foto. Puedes llenar los datos tú mismo o dejar que la IA los sugiera.
+              </Text>
+              <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/(tabs)/add')}>
+                <Ionicons name="add-circle" size={18} color="#FFFFFF" />
+                <Text style={styles.emptyBtnText}>Agregar prenda</Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
           {filteredGarments.map((item) => {
             const isDirty =
               item.status === 'needs_wash' ||
@@ -133,12 +148,30 @@ export default function WardrobeScreen() {
 
             return (
               <View key={item.id} style={styles.card}>
-                <View style={styles.imageBackdrop}>
+                <TouchableOpacity
+                  style={styles.imageBackdrop}
+                  activeOpacity={0.85}
+                  onPress={() => router.push(`/garment/${item.id}`)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Editar ${item.name}`}
+                >
                   <Image
                     source={{ uri: item.cutout_image_url }}
                     style={styles.garmentImage}
                     resizeMode="cover"
                   />
+                  {item.cutout_status === 'pending' || item.cutout_status === 'failed' ? (
+                    <View style={styles.cutoutBadge}>
+                      <Ionicons
+                        name={item.cutout_status === 'pending' ? 'time-outline' : 'alert-circle-outline'}
+                        size={11}
+                        color={SOFT_TACTILE.colors.textPrimary}
+                      />
+                      <Text style={styles.cutoutBadgeText} numberOfLines={1}>
+                        {item.cutout_status === 'pending' ? 'Fondo en cola' : 'Fondo falló'}
+                      </Text>
+                    </View>
+                  ) : null}
                   <View
                     style={[
                       styles.statusBadge,
@@ -154,7 +187,7 @@ export default function WardrobeScreen() {
                       {isDirty ? 'Por lavar' : 'Fresca'}
                     </Text>
                   </View>
-                </View>
+                </TouchableOpacity>
 
                 <Text style={styles.categoryLabel} numberOfLines={1}>
                   {CATEGORY_LABELS[item.category]} · {item.fabric}
@@ -292,6 +325,43 @@ export default function WardrobeScreen() {
 }
 
 const styles = StyleSheet.create({
+  cutoutBadge: {
+    position: 'absolute',
+    left: 8,
+    top: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: SOFT_TACTILE.colors.ochreSoft,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    maxWidth: '80%',
+  },
+  cutoutBadgeText: { color: SOFT_TACTILE.colors.textPrimary, fontSize: 10, fontWeight: '800', flexShrink: 1 },
+  emptyCard: {
+    width: '100%',
+    alignItems: 'center',
+    gap: 8,
+    padding: 28,
+    backgroundColor: SOFT_TACTILE.colors.card,
+    borderRadius: 26,
+    borderWidth: 1,
+    borderColor: SOFT_TACTILE.colors.border,
+  },
+  emptyTitle: { color: SOFT_TACTILE.colors.textPrimary, fontSize: 16, fontWeight: '800' },
+  emptyText: { color: SOFT_TACTILE.colors.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 19 },
+  emptyBtn: {
+    marginTop: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: SOFT_TACTILE.colors.terracotta,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 18,
+  },
+  emptyBtnText: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '800' },
   safeArea: {
     flex: 1,
     backgroundColor: SOFT_TACTILE.colors.canvas,

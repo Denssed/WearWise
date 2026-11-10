@@ -3,13 +3,16 @@ import type { Garment, UserProfile, WeeklyPlan } from '../types/wardrobe';
 
 const seasonSchema = z.enum(['primavera', 'verano', 'otoño', 'invierno']);
 
-export const garmentSchema = z.object({
+export const garmentSchema = z
+  .object({
   id: z.string().min(1),
   name: z.string(),
   category: z.enum(['top', 'bottom', 'outerwear', 'footwear', 'one_piece', 'accessory']),
   subcategory: z.string().default('Prenda'),
   cutout_image_url: z.string(),
   original_image_url: z.string().nullish().transform((v) => v ?? undefined),
+  cutout_status: z.enum(['none', 'pending', 'done', 'failed']).optional(),
+  analysis_source: z.enum(['ai', 'manual']).default('manual'),
   colors: z.array(z.string()).default([]),
   pattern: z.string().default('liso'),
   fabric: z.string().default('Algodón'),
@@ -26,7 +29,13 @@ export const garmentSchema = z.object({
   last_worn_at: z.string().nullish().transform((v) => v ?? undefined),
   last_washed_at: z.string().nullish().transform((v) => v ?? undefined),
   created_at: z.string().default(() => new Date().toISOString()),
-});
+  })
+  // Prendas guardadas antes de existir `cutout_status`: si la imagen ya es un recorte, está lista.
+  .transform((g) => ({
+    ...g,
+    cutout_status:
+      g.cutout_status ?? (g.cutout_image_url.includes('/cutout-') ? ('done' as const) : ('none' as const)),
+  }));
 
 const weeklyScheduleSchema = z.object({
   monday: z.string(),

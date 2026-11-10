@@ -23,7 +23,13 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   customPromptNotes: 'Priorizar combinaciones limpias con máximo 3 tonos por outfit y evitar repetir la misma camisa en la misma semana.',
 };
 
-export const INITIAL_GARMENTS: Garment[] = [
+/**
+ * Prendas de demostración de versiones anteriores. Ya no se cargan en cuentas nuevas;
+ * se conservan solo para reconocer y descartar sus IDs al migrar datos antiguos.
+ */
+export type DemoGarment = Omit<Garment, 'cutout_status' | 'analysis_source'>;
+
+export const INITIAL_GARMENTS: DemoGarment[] = [
   {
     id: 'g-top-1',
     name: 'Camisa Oxford Azul Cielo',

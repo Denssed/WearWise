@@ -44,10 +44,13 @@ npx expo start
 
 ## Configuración de Supabase (Base de Datos y Edge Functions)
 
-1. Ve al **SQL Editor** de tu proyecto en Supabase y ejecuta el contenido de [`supabase/migrations/001_initial_schema.sql`](./supabase/migrations/001_initial_schema.sql).
+1. Ve al **SQL Editor** de tu proyecto en Supabase y ejecuta, en orden, `supabase/migrations/001_initial_schema.sql`, `002_security_and_quotas.sql` y `003_garment_resilience.sql`.
 2. Para desplegar las Edge Functions que protegen tus llaves en la nube:
    ```bash
    npx supabase secrets set REPLICATE_API_TOKEN=r8_tu_token CLAUDE_API_KEY=sk-ant-tu_clave
-   npx supabase functions deploy process-garment
+   npx supabase functions deploy analyze-garment
+   npx supabase functions deploy remove-background
    npx supabase functions deploy generate-weekly-plan
+   npx supabase functions deploy delete-account
    ```
+   Guía completa: [`docs/BACKEND_SETUP.md`](./docs/BACKEND_SETUP.md) y [`docs/ANTIGRAVITY_TASKS.md`](./docs/ANTIGRAVITY_TASKS.md).

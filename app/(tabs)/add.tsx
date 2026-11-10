@@ -4,188 +4,160 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GarmentForm } from '../../src/components/GarmentForm';
+import { useAuth } from '../../src/context/AuthContext';
 import { useWardrobe } from '../../src/context/WardrobeContext';
-import { processGarmentWithAI } from '../../src/services/aiPipeline';
+import { AiServiceError } from '../../src/services/aiErrors';
+import { analyzeGarmentImage } from '../../src/services/garmentAI';
+import { PreparedImage, prepareImageForUpload } from '../../src/services/imagePrep';
+import { uploadGarmentImage } from '../../src/services/imageStorage';
 import { SOFT_TACTILE } from '../../src/theme/softTactile';
 import {
-  CATEGORY_LABELS,
-  GarmentCategory,
-  WASH_GROUP_INFO,
-  WashCareGroup,
-} from '../../src/types/wardrobe';
+  emptyFormValues,
+  formValuesFromAnalysis,
+  garmentFieldsFromForm,
+  GarmentFormValues,
+  validateGarmentForm,
+} from '../../src/utils/garmentForm';
 
-const DEMO_SAMPLES = [
-  {
-    label: 'Chamarra Denim',
-    uri: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&w=600&q=80',
-    preset: {
-      name: 'Chamarra Trucker Mezclilla Azul',
-      category: 'outerwear' as GarmentCategory,
-      subcategory: 'Chamarra Mezclilla',
-      colors: ['Azul Medio'],
-      fabric: 'Mezclilla 100% Algodón',
-      wash_care_group: 'darks' as WashCareGroup,
-      max_wears_before_wash: 8,
-      care_instructions: 'Lavar en frío al revés cada 8 puestas.',
-      ai_styling_notes: 'Ideal sobre camiseta blanca con chinos beige o pantalón negro.',
-    },
-  },
-  {
-    label: 'Camisa Lino Blanca',
-    uri: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=600&q=80',
-    preset: {
-      name: 'Camisa Lino Blanca Relaxed',
-      category: 'top' as GarmentCategory,
-      subcategory: 'Camisa de Lino',
-      colors: ['Blanco'],
-      fabric: 'Lino Europeo',
-      wash_care_group: 'whites' as WashCareGroup,
-      max_wears_before_wash: 2,
-      care_instructions: 'Ciclo delicado con blancos, secar a la sombra en gancho.',
-      ai_styling_notes: 'Perfecta para días cálidos con chinos arena o jeans.',
-    },
-  },
-];
+type Stage = 'pick' | 'processing' | 'form';
 
 export default function AddGarmentScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { addGarment } = useWardrobe();
 
-  const [sourceImageUri, setSourceImageUri] = useState<string | null>(null);
-  const [cutoutImageUri, setCutoutImageUri] = useState<string | null>(null);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState<string>('');
-  const [bgEngineUsed, setBgEngineUsed] = useState<string>('');
-  const [aiEngineUsed, setAiEngineUsed] = useState<string>('');
+  const [stage, setStage] = useState<Stage>('pick');
+  const [image, setImage] = useState<PreparedImage | null>(null);
+  const [values, setValues] = useState<GarmentFormValues>(emptyFormValues());
+  const [pattern, setPattern] = useState('liso');
+  const [source, setSource] = useState<'ai' | 'manual'>('manual');
+  const [notice, setNotice] = useState<string | null>(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [wantCutout, setWantCutout] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
 
-  const [name, setName] = useState('');
-  const [category, setCategory] = useState<GarmentCategory>('top');
-  const [subcategory, setSubcategory] = useState('Camisa');
-  const [colorsText, setColorsText] = useState('Azul, Blanco');
-  const [fabric, setFabric] = useState('Algodón');
-  const [washGroup, setWashGroup] = useState<WashCareGroup>('colors');
-  const [maxWears, setMaxWears] = useState('3');
-  const [careInstructions, setCareInstructions] = useState(
-    'Lavar en agua fría (30°C) ciclo suave.'
-  );
-  const [stylingNotes, setStylingNotes] = useState('');
+  const errors = submitted ? validateGarmentForm(values) : {};
 
-  const handleCaptureOrPick = async (useCamera: boolean) => {
+  const resetAll = () => {
+    setStage('pick');
+    setImage(null);
+    setValues(emptyFormValues());
+    setPattern('liso');
+    setSource('manual');
+    setNotice(null);
+    setSubmitted(false);
+  };
+
+  const handlePick = async (useCamera: boolean) => {
     try {
-      if (useCamera) {
-        const perm = await ImagePicker.requestCameraPermissionsAsync();
-        if (!perm.granted) return;
-      } else {
-        const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!perm.granted) return;
+      const perm = useCamera
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert(
+          'Permiso necesario',
+          useCamera
+            ? 'Activa el permiso de cámara en los ajustes para fotografiar tus prendas.'
+            : 'Activa el permiso de fotos en los ajustes para elegir imágenes de tu galería.'
+        );
+        return;
       }
 
+      const options: ImagePicker.ImagePickerOptions = {
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.8,
+      };
       const result = useCamera
-        ? await ImagePicker.launchCameraAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            quality: 0.8,
-            base64: true,
-          })
-        : await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: true,
-            quality: 0.8,
-            base64: true,
-          });
-
+        ? await ImagePicker.launchCameraAsync(options)
+        : await ImagePicker.launchImageLibraryAsync(options);
       if (result.canceled || !result.assets?.[0]) return;
 
       const asset = result.assets[0];
-      setSourceImageUri(asset.uri);
-      setIsProcessing(true);
-      setPipelineStage(
-        '1/2 Recortando el fondo de la prenda · 2/2 Analizando tela y cuidado textil...'
-      );
+      setStage('processing');
+      const prepared = await prepareImageForUpload(asset.uri, asset.width);
+      setImage(prepared);
+      setNotice(null);
+      setSubmitted(false);
 
-      const aiResult = await processGarmentWithAI(
-        asset.uri,
-        asset.base64,
-        asset.mimeType || 'image/jpeg'
-      );
+      if (manualMode) {
+        setValues(emptyFormValues());
+        setSource('manual');
+        setStage('form');
+        return;
+      }
 
-      setCutoutImageUri(aiResult.cutoutImageUrl);
-      setBgEngineUsed('Fondo Transparente');
-      setAiEngineUsed('Análisis Textil IA');
-
-      setName(aiResult.name);
-      setCategory(aiResult.category);
-      setSubcategory(aiResult.subcategory);
-      setColorsText(aiResult.colors.join(', '));
-      setFabric(aiResult.fabric);
-      setWashGroup(aiResult.wash_care_group);
-      setMaxWears(String(aiResult.max_wears_before_wash));
-      setCareInstructions(aiResult.care_instructions);
-      setStylingNotes(aiResult.ai_styling_notes);
-    } finally {
-      setIsProcessing(false);
-      setPipelineStage('');
+      try {
+        const analysis = await analyzeGarmentImage(prepared.base64, prepared.mimeType);
+        setValues(formValuesFromAnalysis(analysis));
+        setPattern(analysis.pattern || 'liso');
+        setSource('ai');
+      } catch (e) {
+        // La IA no está disponible: la prenda se puede agregar igual, rellenando los datos a mano.
+        const reason = e instanceof AiServiceError ? e.message : 'No pudimos analizar la prenda.';
+        setNotice(`${reason} No se pudo agregar con IA ahora; completa los datos manualmente.`);
+        setValues(emptyFormValues());
+        setSource('manual');
+      }
+      setStage('form');
+    } catch (e) {
+      console.warn('Error preparando la foto:', e);
+      Alert.alert('No pudimos usar esa foto', 'Inténtalo con otra imagen.');
+      setStage(image ? 'form' : 'pick');
     }
   };
 
-  const handleLoadSample = (sample: (typeof DEMO_SAMPLES)[0]) => {
-    setSourceImageUri(sample.uri);
-    setCutoutImageUri(sample.uri);
-    setBgEngineUsed('Fondo Transparente');
-    setAiEngineUsed('Análisis Textil IA');
-    setName(sample.preset.name);
-    setCategory(sample.preset.category);
-    setSubcategory(sample.preset.subcategory);
-    setColorsText(sample.preset.colors.join(', '));
-    setFabric(sample.preset.fabric);
-    setWashGroup(sample.preset.wash_care_group);
-    setMaxWears(String(sample.preset.max_wears_before_wash));
-    setCareInstructions(sample.preset.care_instructions);
-    setStylingNotes(sample.preset.ai_styling_notes);
-  };
+  const handleSave = async () => {
+    setSubmitted(true);
+    if (!image || Object.keys(validateGarmentForm(values)).length > 0) return;
 
-  const handleSaveToWardrobe = async () => {
-    if (!cutoutImageUri || !name.trim()) return;
+    setSaving(true);
+    try {
+      // La foto se sube a Storage; si no hay conexión se guarda local y se sube después automáticamente.
+      let imageUrl = image.uri;
+      if (user) {
+        try {
+          imageUrl = (await uploadGarmentImage(user.id, image.uri)).publicUrl;
+        } catch (e) {
+          console.warn('Foto guardada solo en el dispositivo por ahora:', e);
+        }
+      }
 
-    await addGarment({
-      name: name.trim(),
-      category,
-      subcategory: subcategory.trim() || 'Prenda',
-      cutout_image_url: cutoutImageUri,
-      original_image_url: sourceImageUri || cutoutImageUri,
-      colors: colorsText
-        .split(',')
-        .map((c) => c.trim())
-        .filter(Boolean),
-      pattern: 'liso',
-      fabric: fabric.trim() || 'Algodón',
-      seasons: ['primavera', 'verano', 'otoño', 'invierno'],
-      formality: 3,
-      wash_care_group: washGroup,
-      care_instructions: careInstructions,
-      current_wears: 0,
-      max_wears_before_wash: Math.max(1, parseInt(maxWears, 10) || 2),
-      total_lifetime_wears: 0,
-      status: 'clean',
-      ai_styling_notes: stylingNotes,
-      is_favorite: false,
-    });
+      await addGarment({
+        ...garmentFieldsFromForm(values),
+        pattern,
+        cutout_image_url: imageUrl,
+        original_image_url: imageUrl,
+        cutout_status: wantCutout ? 'pending' : 'none',
+        analysis_source: source,
+        current_wears: 0,
+        total_lifetime_wears: 0,
+        status: 'clean',
+        is_favorite: false,
+      });
 
-    setSourceImageUri(null);
-    setCutoutImageUri(null);
-    setName('');
-    router.push('/(tabs)/wardrobe');
+      resetAll();
+      router.push('/(tabs)/wardrobe');
+    } catch (e) {
+      console.warn('Error guardando la prenda:', e);
+      Alert.alert('No se pudo guardar', 'Inténtalo de nuevo.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -200,18 +172,17 @@ export default function AddGarmentScreen() {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={styles.title}>Digitalizar Nueva Prenda</Text>
+          <Text style={styles.title}>Agregar Nueva Prenda</Text>
           <Text style={styles.subtitle}>
-            Toma o sube una foto de tu prenda: quitamos el fondo automáticamente y
-            detectamos la tela, el grupo de lavado y cuántos usos rinde.
+            Toma o sube una foto. La IA puede detectar la tela, el lavado y los usos; si no está
+            disponible, completas los datos tú mismo y la prenda se guarda igual.
           </Text>
 
-          {/* BOTONES TÁCTILES DE CÁMARA Y GALERÍA */}
           <View style={styles.captureButtonsRow}>
             <TouchableOpacity
-              style={styles.cameraButton}
-              onPress={() => handleCaptureOrPick(true)}
-              disabled={isProcessing}
+              style={[styles.cameraButton, stage === 'processing' && styles.disabled]}
+              onPress={() => handlePick(true)}
+              disabled={stage === 'processing'}
             >
               <Ionicons name="camera" size={20} color="#FFFFFF" />
               <Text style={styles.captureButtonText} numberOfLines={1}>
@@ -220,20 +191,13 @@ export default function AddGarmentScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.galleryButton}
-              onPress={() => handleCaptureOrPick(false)}
-              disabled={isProcessing}
+              style={[styles.galleryButton, stage === 'processing' && styles.disabled]}
+              onPress={() => handlePick(false)}
+              disabled={stage === 'processing'}
             >
-              <Ionicons
-                name="images"
-                size={20}
-                color={SOFT_TACTILE.colors.textPrimary}
-              />
+              <Ionicons name="images" size={20} color={SOFT_TACTILE.colors.textPrimary} />
               <Text
-                style={[
-                  styles.captureButtonText,
-                  { color: SOFT_TACTILE.colors.textPrimary },
-                ]}
+                style={[styles.captureButtonText, { color: SOFT_TACTILE.colors.textPrimary }]}
                 numberOfLines={1}
               >
                 Subir de Galería
@@ -241,193 +205,90 @@ export default function AddGarmentScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* PRUEBA RÁPIDA EN SIMULADOR */}
-          <View style={styles.demoStrip}>
-            <Text style={styles.demoStripLabel}>
-              Muestras rápidas para probar el escáner:
-            </Text>
-            <View style={styles.demoBtnsRow}>
-              {DEMO_SAMPLES.map((s) => (
-                <TouchableOpacity
-                  key={s.label}
-                  style={styles.demoBtn}
-                  onPress={() => handleLoadSample(s)}
-                >
-                  <Ionicons
-                    name="sparkles-outline"
-                    size={13}
-                    color={SOFT_TACTILE.colors.terracotta}
-                  />
-                  <Text style={styles.demoBtnText} numberOfLines={1}>
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+          <View style={styles.optionRow}>
+            <View style={styles.optionTextWrap}>
+              <Text style={styles.optionTitle}>Llenar los datos a mano (sin IA)</Text>
+              <Text style={styles.optionDesc}>No se usa el análisis automático al elegir la foto.</Text>
             </View>
+            <Switch
+              value={manualMode}
+              onValueChange={setManualMode}
+              trackColor={{ true: SOFT_TACTILE.colors.terracotta, false: SOFT_TACTILE.colors.pillBg }}
+            />
           </View>
 
-          {isProcessing ? (
+          {stage === 'processing' ? (
             <View style={styles.processingCard}>
-              <ActivityIndicator
-                size="large"
-                color={SOFT_TACTILE.colors.terracotta}
-              />
-              <Text style={styles.processingText}>{pipelineStage}</Text>
+              <ActivityIndicator size="large" color={SOFT_TACTILE.colors.terracotta} />
+              <Text style={styles.processingText}>
+                {manualMode ? 'Preparando la foto...' : 'Analizando tela, lavado y cuidado textil...'}
+              </Text>
             </View>
           ) : null}
 
-          {cutoutImageUri && !isProcessing ? (
+          {stage === 'form' && image ? (
             <View style={styles.formCard}>
+              {notice ? (
+                <View style={styles.noticeBox}>
+                  <Ionicons name="alert-circle" size={18} color={SOFT_TACTILE.colors.ochre} />
+                  <Text style={styles.noticeText}>{notice}</Text>
+                </View>
+              ) : null}
+
               <View style={styles.previewSection}>
-                <View style={styles.checkerboardBox}>
-                  <Image
-                    source={{ uri: cutoutImageUri }}
-                    style={styles.cutoutPreview}
-                    resizeMode="cover"
+                <View style={styles.previewBox}>
+                  <Image source={{ uri: image.uri }} style={styles.preview} resizeMode="cover" />
+                </View>
+                <View style={styles.badge}>
+                  <Ionicons
+                    name={source === 'ai' ? 'sparkles-outline' : 'create-outline'}
+                    size={12}
+                    color={source === 'ai' ? SOFT_TACTILE.colors.terracotta : SOFT_TACTILE.colors.textSecondary}
                   />
-                </View>
-                <View style={styles.engineBadgesRow}>
-                  <View style={styles.engineBadge}>
-                    <Ionicons
-                      name="cut-outline"
-                      size={12}
-                      color={SOFT_TACTILE.colors.sage}
-                    />
-                    <Text style={styles.engineBadgeText} numberOfLines={1}>
-                      {bgEngineUsed}
-                    </Text>
-                  </View>
-                  <View style={styles.engineBadge}>
-                    <Ionicons
-                      name="sparkles-outline"
-                      size={12}
-                      color={SOFT_TACTILE.colors.terracotta}
-                    />
-                    <Text style={styles.engineBadgeText} numberOfLines={1}>
-                      {aiEngineUsed}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-
-              <Text style={styles.fieldLabel}>Nombre de la prenda</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Ej. Camisa Oxford Azul"
-                placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              />
-
-              <Text style={styles.fieldLabel}>Categoría</Text>
-              <View style={styles.pillsWrap}>
-                {(Object.keys(CATEGORY_LABELS) as GarmentCategory[]).map((cat) => {
-                  const active = category === cat;
-                  return (
-                    <TouchableOpacity
-                      key={cat}
-                      style={[
-                        styles.choicePill,
-                        active && styles.choicePillActive,
-                      ]}
-                      onPress={() => setCategory(cat)}
-                    >
-                      <Text
-                        style={[
-                          styles.choicePillText,
-                          active && styles.choicePillTextActive,
-                        ]}
-                      >
-                        {CATEGORY_LABELS[cat]}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <View style={styles.twoColRow}>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.fieldLabel} numberOfLines={1}>
-                    Colores detectados
+                  <Text style={styles.badgeText}>
+                    {source === 'ai' ? 'Datos sugeridos por IA (revísalos)' : 'Datos manuales'}
                   </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={colorsText}
-                    onChangeText={setColorsText}
-                    placeholder="Azul, Blanco"
-                    placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-                  />
                 </View>
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text style={styles.fieldLabel} numberOfLines={1}>
-                    Tela / Material
+              </View>
+
+              <GarmentForm
+                values={values}
+                onChange={setValues}
+                errors={errors}
+                applyCategoryDefaults={source === 'manual'}
+              />
+
+              <View style={[styles.optionRow, { marginTop: 18, marginBottom: 0 }]}>
+                <View style={styles.optionTextWrap}>
+                  <Text style={styles.optionTitle}>Quitar el fondo de la foto</Text>
+                  <Text style={styles.optionDesc}>
+                    Se hace en segundo plano; si el servicio no responde, se reintenta solo.
                   </Text>
-                  <TextInput
-                    style={styles.input}
-                    value={fabric}
-                    onChangeText={setFabric}
-                    placeholder="Algodón"
-                    placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-                  />
                 </View>
+                <Switch
+                  value={wantCutout}
+                  onValueChange={setWantCutout}
+                  trackColor={{ true: SOFT_TACTILE.colors.sage, false: SOFT_TACTILE.colors.pillBg }}
+                />
               </View>
-
-              <Text style={styles.fieldLabel}>
-                Tanda de Lavandería Sugerida
-              </Text>
-              <View style={styles.pillsWrap}>
-                {(Object.keys(WASH_GROUP_INFO) as WashCareGroup[]).map((grp) => {
-                  const info = WASH_GROUP_INFO[grp];
-                  const active = washGroup === grp;
-                  return (
-                    <TouchableOpacity
-                      key={grp}
-                      style={[
-                        styles.choicePill,
-                        active && styles.choicePillActive,
-                      ]}
-                      onPress={() => setWashGroup(grp)}
-                    >
-                      <Text
-                        style={[
-                          styles.choicePillText,
-                          active && styles.choicePillTextActive,
-                        ]}
-                      >
-                        {info.label}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Text style={styles.fieldLabel}>
-                Máximo de puestas antes de necesitar lavado
-              </Text>
-              <TextInput
-                style={styles.input}
-                value={maxWears}
-                onChangeText={setMaxWears}
-                keyboardType="number-pad"
-                placeholder="Ej. 3"
-                placeholderTextColor={SOFT_TACTILE.colors.textMuted}
-              />
-
-              <Text style={styles.fieldLabel}>Instrucción de cuidado textil</Text>
-              <TextInput
-                style={styles.input}
-                value={careInstructions}
-                onChangeText={setCareInstructions}
-              />
 
               <TouchableOpacity
-                style={styles.saveGarmentBtn}
-                onPress={handleSaveToWardrobe}
+                style={[styles.saveGarmentBtn, saving && styles.disabled]}
+                onPress={handleSave}
+                disabled={saving}
               >
-                <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                {saving ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
+                )}
                 <Text style={styles.saveGarmentBtnText} numberOfLines={1}>
-                  Guardar Prenda en Mi Cápsula
+                  Guardar Prenda en Mi Armario
                 </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity style={styles.discardBtn} onPress={resetAll} disabled={saving}>
+                <Text style={styles.discardText}>Descartar</Text>
               </TouchableOpacity>
             </View>
           ) : null}
@@ -438,22 +299,10 @@ export default function AddGarmentScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: SOFT_TACTILE.colors.canvas,
-  },
-  container: {
-    flex: 1,
-  },
-  content: {
-    padding: 18,
-    paddingBottom: 40,
-  },
-  title: {
-    color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 25,
-    fontWeight: '800',
-  },
+  safeArea: { flex: 1, backgroundColor: SOFT_TACTILE.colors.canvas },
+  container: { flex: 1 },
+  content: { padding: 18, paddingBottom: 40 },
+  title: { color: SOFT_TACTILE.colors.textPrimary, fontSize: 25, fontWeight: '800' },
   subtitle: {
     color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 13,
@@ -461,11 +310,8 @@ const styles = StyleSheet.create({
     marginTop: 4,
     marginBottom: 18,
   },
-  captureButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 14,
-  },
+  disabled: { opacity: 0.55 },
+  captureButtonsRow: { flexDirection: 'row', gap: 10, marginBottom: 14 },
   cameraButton: {
     flex: 1,
     minWidth: 0,
@@ -493,13 +339,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
   },
-  captureButtonText: {
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    fontWeight: '800',
-    flexShrink: 1,
-  },
-  demoStrip: {
+  captureButtonText: { color: '#FFFFFF', fontSize: 13.5, fontWeight: '800', flexShrink: 1 },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
     backgroundColor: SOFT_TACTILE.colors.card,
     borderRadius: 20,
     padding: 13,
@@ -507,33 +351,9 @@ const styles = StyleSheet.create({
     borderColor: SOFT_TACTILE.colors.border,
     marginBottom: 16,
   },
-  demoStripLabel: {
-    color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 11.5,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  demoBtnsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  demoBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    maxWidth: '100%',
-  },
-  demoBtnText: {
-    color: SOFT_TACTILE.colors.terracotta,
-    fontSize: 12,
-    fontWeight: '800',
-    flexShrink: 1,
-  },
+  optionTextWrap: { flex: 1, minWidth: 0 },
+  optionTitle: { color: SOFT_TACTILE.colors.textPrimary, fontSize: 13, fontWeight: '800' },
+  optionDesc: { color: SOFT_TACTILE.colors.textSecondary, fontSize: 11.5, marginTop: 2, lineHeight: 16 },
   processingCard: {
     backgroundColor: SOFT_TACTILE.colors.card,
     borderRadius: 24,
@@ -557,11 +377,18 @@ const styles = StyleSheet.create({
     borderColor: SOFT_TACTILE.colors.border,
     ...SOFT_TACTILE.shadow,
   },
-  previewSection: {
-    alignItems: 'center',
-    marginBottom: 16,
+  noticeBox: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: SOFT_TACTILE.colors.ochreSoft,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 14,
   },
-  checkerboardBox: {
+  noticeText: { flex: 1, color: SOFT_TACTILE.colors.textPrimary, fontSize: 12.5, lineHeight: 18, fontWeight: '600' },
+  previewSection: { alignItems: 'center', marginBottom: 6 },
+  previewBox: {
     width: 190,
     height: 190,
     borderRadius: 24,
@@ -571,17 +398,8 @@ const styles = StyleSheet.create({
     borderColor: SOFT_TACTILE.colors.border,
     marginBottom: 10,
   },
-  cutoutPreview: {
-    width: '100%',
-    height: '100%',
-  },
-  engineBadgesRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  engineBadge: {
+  preview: { width: '100%', height: '100%' },
+  badge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
@@ -593,61 +411,9 @@ const styles = StyleSheet.create({
     borderColor: SOFT_TACTILE.colors.border,
     maxWidth: '100%',
   },
-  engineBadgeText: {
-    color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 11,
-    fontWeight: '700',
-    flexShrink: 1,
-  },
-  fieldLabel: {
-    color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '800',
-    marginBottom: 6,
-    marginTop: 10,
-  },
-  input: {
-    backgroundColor: SOFT_TACTILE.colors.canvas,
-    borderWidth: 1,
-    borderColor: SOFT_TACTILE.colors.border,
-    borderRadius: 14,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 13.5,
-  },
-  twoColRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  pillsWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  choicePill: {
-    backgroundColor: SOFT_TACTILE.colors.canvas,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: SOFT_TACTILE.colors.border,
-  },
-  choicePillActive: {
-    backgroundColor: SOFT_TACTILE.colors.terracotta,
-    borderColor: SOFT_TACTILE.colors.terracotta,
-  },
-  choicePillText: {
-    color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  choicePillTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
+  badgeText: { color: SOFT_TACTILE.colors.textPrimary, fontSize: 11, fontWeight: '700', flexShrink: 1 },
   saveGarmentBtn: {
-    marginTop: 20,
+    marginTop: 18,
     backgroundColor: SOFT_TACTILE.colors.sage,
     paddingVertical: 15,
     paddingHorizontal: 12,
@@ -657,10 +423,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
   },
-  saveGarmentBtnText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-    flexShrink: 1,
-  },
+  saveGarmentBtnText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800', flexShrink: 1 },
+  discardBtn: { alignItems: 'center', marginTop: 12 },
+  discardText: { color: SOFT_TACTILE.colors.textSecondary, fontSize: 13, fontWeight: '700' },
 });
