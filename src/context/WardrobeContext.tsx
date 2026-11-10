@@ -53,14 +53,17 @@ interface WardrobeContextValue {
 const WardrobeContext = createContext<WardrobeContextValue | undefined>(undefined);
 
 const DEFAULT_API_SETTINGS: ApiSettings = {
-  supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL || '',
-  supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '',
-  replicateApiToken: process.env.EXPO_PUBLIC_REPLICATE_API_TOKEN || '',
+  supabaseUrl:
+    process.env.EXPO_PUBLIC_SUPABASE_URL ||
+    'https://gnhsmapjozmxpmhtudgx.supabase.co',
+  supabaseAnonKey:
+    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduaHNtYXBqb3pteHBtaHR1ZGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMzU5ODMsImV4cCI6MjEwOTkxMTk4M30.mS7472u9Tk_ScgBc1xhEDAxyENcEsA32LMJ30PEi7j0',
+  replicateApiToken: '',
   replicateBgVersion:
-    process.env.EXPO_PUBLIC_REPLICATE_BG_VERSION ||
     'a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc',
-  claudeApiKey: process.env.EXPO_PUBLIC_CLAUDE_API_KEY || '',
-  claudeModel: process.env.EXPO_PUBLIC_CLAUDE_MODEL || 'claude-haiku-4-5-20251001',
+  claudeApiKey: '',
+  claudeModel: 'claude-haiku-4-5-20251001',
 };
 
 export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

@@ -5,15 +5,19 @@ import { ApiSettings, Garment, UserProfile, WeeklyPlan } from '../types/wardrobe
 let supabaseInstance: SupabaseClient | null = null;
 let currentConfiguredUrl = '';
 
+const DEFAULT_SUPABASE_URL = 'https://gnhsmapjozmxpmhtudgx.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduaHNtYXBqb3pteHBtaHR1ZGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMzU5ODMsImV4cCI6MjEwOTkxMTk4M30.mS7472u9Tk_ScgBc1xhEDAxyENcEsA32LMJ30PEi7j0';
+
 export function getSupabaseClient(settings?: Partial<ApiSettings>): SupabaseClient | null {
   const url =
     settings?.supabaseUrl ||
     process.env.EXPO_PUBLIC_SUPABASE_URL ||
-    '';
+    DEFAULT_SUPABASE_URL;
   const anonKey =
     settings?.supabaseAnonKey ||
     process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-    '';
+    DEFAULT_SUPABASE_ANON_KEY;
 
   if (!url || !anonKey || url.includes('tu-proyecto')) {
     return null;
