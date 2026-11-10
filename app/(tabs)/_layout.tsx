@@ -15,6 +15,7 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        tabBarAllowFontScaling: false,
         tabBarActiveTintColor: SOFT_TACTILE.colors.terracotta,
         tabBarInactiveTintColor: SOFT_TACTILE.colors.textMuted,
         tabBarStyle: {
@@ -26,7 +27,7 @@ export default function TabsLayout() {
           paddingBottom: Platform.OS === 'ios' ? 26 : 12,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 10.5,
           fontWeight: '700',
         },
       }}
@@ -66,7 +67,7 @@ export default function TabsLayout() {
           tabBarBadgeStyle: {
             backgroundColor: SOFT_TACTILE.colors.clayRed,
             color: '#FFFFFF',
-            fontSize: 11,
+            fontSize: 10,
             fontWeight: '700',
           },
           tabBarIcon: ({ color, size }) => (
@@ -77,7 +78,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Perfil & API',
+          title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="person-circle-outline" size={size} color={color} />
           ),

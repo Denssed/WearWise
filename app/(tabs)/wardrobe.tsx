@@ -53,7 +53,7 @@ export default function WardrobeScreen() {
       <View style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Mi Cápsula Digital</Text>
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} numberOfLines={2}>
             {garments.length} prendas recortadas · Control táctil de frescura y lavadas
           </Text>
         </View>
@@ -78,6 +78,7 @@ export default function WardrobeScreen() {
                       styles.filterChipText,
                       active && styles.filterChipTextActive,
                     ]}
+                    numberOfLines={1}
                   >
                     {cat.label}
                   </Text>
@@ -91,7 +92,7 @@ export default function WardrobeScreen() {
         <View style={styles.statusTabsRow}>
           {[
             { key: 'all' as const, label: 'Todas' },
-            { key: 'clean' as const, label: 'Frescas y Limpias' },
+            { key: 'clean' as const, label: 'Frescas' },
             { key: 'needs_wash' as const, label: 'En Cesto' },
           ].map((tab) => {
             const active = statusFilter === tab.key;
@@ -106,6 +107,7 @@ export default function WardrobeScreen() {
                     styles.statusTabText,
                     active && styles.statusTabTextActive,
                   ]}
+                  numberOfLines={1}
                 >
                   {tab.label}
                 </Text>
@@ -148,34 +150,39 @@ export default function WardrobeScreen() {
                       size={11}
                       color="#FFFFFF"
                     />
-                    <Text style={styles.statusBadgeText}>
+                    <Text style={styles.statusBadgeText} numberOfLines={1}>
                       {isDirty ? 'Por lavar' : 'Fresca'}
                     </Text>
                   </View>
                 </View>
 
-                <Text style={styles.categoryLabel}>
+                <Text style={styles.categoryLabel} numberOfLines={1}>
                   {CATEGORY_LABELS[item.category]} · {item.fabric}
                 </Text>
-                <Text style={styles.garmentName} numberOfLines={1}>
+                <Text style={styles.garmentName} numberOfLines={2}>
                   {item.name}
                 </Text>
 
                 <View style={styles.tagsRow}>
                   <View style={styles.washGroupPill}>
-                    <Text style={styles.washGroupText}>{washGroup.label}</Text>
+                    <Text style={styles.washGroupText} numberOfLines={1}>
+                      {washGroup.label}
+                    </Text>
                   </View>
                 </View>
 
                 {/* MEDIDOR TÁCTIL DE USOS ANTES DE LAVAR */}
                 <View style={styles.wearTrackerBox}>
                   <View style={styles.wearHeaderRow}>
-                    <Text style={styles.wearCounterLabel}>Puestas actuales:</Text>
+                    <Text style={styles.wearCounterLabel} numberOfLines={1}>
+                      Usos:
+                    </Text>
                     <Text
                       style={[
                         styles.wearCounterNumbers,
                         isDirty && { color: SOFT_TACTILE.colors.clayRed },
                       ]}
+                      numberOfLines={1}
                     >
                       {item.current_wears} / {item.max_wears_before_wash}
                     </Text>
@@ -198,7 +205,9 @@ export default function WardrobeScreen() {
                   </View>
 
                   <View style={styles.thresholdAdjustRow}>
-                    <Text style={styles.thresholdLabel}>Máx usos:</Text>
+                    <Text style={styles.thresholdLabel} numberOfLines={1}>
+                      Límite:
+                    </Text>
                     <View style={styles.stepperBtns}>
                       <TouchableOpacity
                         style={styles.stepBtn}
@@ -237,10 +246,12 @@ export default function WardrobeScreen() {
                     >
                       <Ionicons
                         name="add-circle-outline"
-                        size={15}
+                        size={14}
                         color={SOFT_TACTILE.colors.terracotta}
                       />
-                      <Text style={styles.useOnceBtnText}>+1 Uso</Text>
+                      <Text style={styles.useOnceBtnText} numberOfLines={1}>
+                        +1 Uso
+                      </Text>
                     </TouchableOpacity>
                   ) : null}
 
@@ -257,7 +268,7 @@ export default function WardrobeScreen() {
                   >
                     <Ionicons
                       name={isDirty ? 'sparkles-outline' : 'water-outline'}
-                      size={14}
+                      size={13}
                       color={isDirty ? '#FFFFFF' : SOFT_TACTILE.colors.textPrimary}
                     />
                     <Text
@@ -265,8 +276,9 @@ export default function WardrobeScreen() {
                         styles.washNowBtnText,
                         isDirty && { color: '#FFFFFF' },
                       ]}
+                      numberOfLines={1}
                     >
-                      {isDirty ? 'Marcar Lavada' : 'A lavar'}
+                      {isDirty ? 'Marcar Lavada' : 'Lavar'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -294,12 +306,12 @@ const styles = StyleSheet.create({
   },
   title: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 25,
+    fontSize: 24,
     fontWeight: '800',
   },
   subtitle: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12.5,
     marginTop: 2,
   },
   filterRow: {
@@ -308,7 +320,7 @@ const styles = StyleSheet.create({
   },
   filterChip: {
     backgroundColor: SOFT_TACTILE.colors.card,
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 999,
     borderWidth: 1,
@@ -320,7 +332,7 @@ const styles = StyleSheet.create({
   },
   filterChipText: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
   },
   filterChipTextActive: {
@@ -337,7 +349,9 @@ const styles = StyleSheet.create({
   },
   statusTab: {
     flex: 1,
+    minWidth: 0,
     paddingVertical: 8,
+    paddingHorizontal: 4,
     alignItems: 'center',
     borderRadius: 12,
   },
@@ -358,21 +372,21 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingBottom: 32,
-    gap: 12,
+    rowGap: 12,
   },
   card: {
-    width: '48%',
+    width: '48.2%',
     backgroundColor: SOFT_TACTILE.colors.card,
-    borderRadius: 24,
-    padding: 11,
+    borderRadius: 22,
+    padding: 10,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
     ...SOFT_TACTILE.shadow,
   },
   imageBackdrop: {
     width: '100%',
-    height: 140,
-    borderRadius: 18,
+    height: 132,
+    borderRadius: 16,
     backgroundColor: SOFT_TACTILE.colors.recessed,
     overflow: 'hidden',
     marginBottom: 8,
@@ -384,13 +398,14 @@ const styles = StyleSheet.create({
   },
   statusBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 7,
+    left: 7,
+    maxWidth: '88%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 999,
   },
   statusBadgeClean: {
@@ -401,20 +416,22 @@ const styles = StyleSheet.create({
   },
   statusBadgeText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
   },
   categoryLabel: {
     color: SOFT_TACTILE.colors.terracotta,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   garmentName: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '800',
     marginVertical: 3,
+    minHeight: 34,
+    lineHeight: 16.5,
   },
   tagsRow: {
     flexDirection: 'row',
@@ -423,6 +440,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   washGroupPill: {
+    maxWidth: '100%',
     backgroundColor: SOFT_TACTILE.colors.recessed,
     borderRadius: 999,
     paddingHorizontal: 8,
@@ -444,9 +462,12 @@ const styles = StyleSheet.create({
   wearHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 4,
     marginBottom: 5,
   },
   wearCounterLabel: {
+    flex: 1,
     color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 10,
   },
@@ -454,6 +475,7 @@ const styles = StyleSheet.create({
     color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
     fontWeight: '800',
+    flexShrink: 0,
   },
   progressTrack: {
     height: 6,
@@ -470,20 +492,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 4,
   },
   thresholdLabel: {
+    flex: 1,
     color: SOFT_TACTILE.colors.textMuted,
     fontSize: 10,
   },
   stepperBtns: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
+    flexShrink: 0,
   },
   stepBtn: {
-    width: 22,
-    height: 22,
-    borderRadius: 8,
+    width: 21,
+    height: 21,
+    borderRadius: 7,
     backgroundColor: SOFT_TACTILE.colors.pillBg,
     alignItems: 'center',
     justifyContent: 'center',
@@ -497,6 +522,8 @@ const styles = StyleSheet.create({
     color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
     fontWeight: '800',
+    minWidth: 14,
+    textAlign: 'center',
   },
   cardActions: {
     flexDirection: 'row',
@@ -504,35 +531,41 @@ const styles = StyleSheet.create({
   },
   useOnceBtn: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
     paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    borderRadius: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
   },
   useOnceBtnText: {
     color: SOFT_TACTILE.colors.terracotta,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
+    flexShrink: 1,
   },
   washNowBtn: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.recessed,
     paddingVertical: 8,
-    borderRadius: 12,
+    paddingHorizontal: 6,
+    borderRadius: 11,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 4,
+    gap: 3,
   },
   washNowBtnHighlighted: {
     backgroundColor: SOFT_TACTILE.colors.sage,
   },
   washNowBtnText: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
+    flexShrink: 1,
   },
 });

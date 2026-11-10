@@ -56,19 +56,25 @@ export default function LaundryScreen() {
             <Text style={[styles.summaryNumber, { color: SOFT_TACTILE.colors.clayRed }]}>
               {dirtyGarments.length}
             </Text>
-            <Text style={styles.summaryLabel}>Para lavar hoy</Text>
+            <Text style={styles.summaryLabel} numberOfLines={2}>
+              Para lavar hoy
+            </Text>
           </View>
           <View style={styles.summaryCard}>
             <Text style={[styles.summaryNumber, { color: SOFT_TACTILE.colors.ochre }]}>
               {almostDirtyGarments.length}
             </Text>
-            <Text style={styles.summaryLabel}>Con 1 puesta libre</Text>
+            <Text style={styles.summaryLabel} numberOfLines={2}>
+              Con 1 puesta libre
+            </Text>
           </View>
           <View style={styles.summaryCard}>
             <Text style={[styles.summaryNumber, { color: SOFT_TACTILE.colors.sage }]}>
               {garments.length - dirtyGarments.length}
             </Text>
-            <Text style={styles.summaryLabel}>Frescas en armario</Text>
+            <Text style={styles.summaryLabel} numberOfLines={2}>
+              Frescas en armario
+            </Text>
           </View>
         </View>
 
@@ -91,12 +97,16 @@ export default function LaundryScreen() {
                       { backgroundColor: SOFT_TACTILE.colors.terracotta },
                     ]}
                   />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.batchTitle}>{info.label}</Text>
-                    <Text style={styles.batchTemp}>{info.tempRecommendation}</Text>
+                  <View style={styles.batchTitleWrap}>
+                    <Text style={styles.batchTitle} numberOfLines={1}>
+                      {info.label}
+                    </Text>
+                    <Text style={styles.batchTemp} numberOfLines={2}>
+                      {info.tempRecommendation}
+                    </Text>
                   </View>
                   <View style={styles.countBadge}>
-                    <Text style={styles.countBadgeText}>
+                    <Text style={styles.countBadgeText} numberOfLines={1}>
                       {urgentInGroup.length} listas
                     </Text>
                   </View>
@@ -115,9 +125,11 @@ export default function LaundryScreen() {
                         source={{ uri: item.cutout_image_url }}
                         style={styles.itemThumb}
                       />
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.itemName}>{item.name}</Text>
-                        <Text style={styles.itemReason}>
+                      <View style={styles.itemInfoWrap}>
+                        <Text style={styles.itemName} numberOfLines={1}>
+                          {item.name}
+                        </Text>
+                        <Text style={styles.itemReason} numberOfLines={2}>
                           Alcanzó {item.current_wears}/{item.max_wears_before_wash}{' '}
                           puestas · {item.care_instructions}
                         </Text>
@@ -143,9 +155,11 @@ export default function LaundryScreen() {
                             source={{ uri: item.cutout_image_url }}
                             style={styles.itemThumb}
                           />
-                          <View style={{ flex: 1 }}>
-                            <Text style={styles.itemName}>{item.name}</Text>
-                            <Text style={styles.itemOptionalMeta}>
+                          <View style={styles.itemInfoWrap}>
+                            <Text style={styles.itemName} numberOfLines={1}>
+                              {item.name}
+                            </Text>
+                            <Text style={styles.itemOptionalMeta} numberOfLines={1}>
                               Usos: {item.current_wears}/{item.max_wears_before_wash}
                             </Text>
                           </View>
@@ -153,7 +167,7 @@ export default function LaundryScreen() {
                             style={styles.optionalWashBtn}
                             onPress={() => washGarmentsByIds([item.id])}
                           >
-                            <Text style={styles.optionalWashBtnText}>
+                            <Text style={styles.optionalWashBtnText} numberOfLines={1}>
                               Incluir y lavar
                             </Text>
                           </TouchableOpacity>
@@ -167,7 +181,7 @@ export default function LaundryScreen() {
                     onPress={() => washBatchByGroup(groupKey)}
                   >
                     <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                    <Text style={styles.washBatchBtnText}>
+                    <Text style={styles.washBatchBtnText} numberOfLines={2}>
                       Marcar tanda de {info.label} como lavada
                     </Text>
                   </TouchableOpacity>
@@ -207,26 +221,29 @@ const styles = StyleSheet.create({
   },
   summaryRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
     marginBottom: 18,
   },
   summaryCard: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.card,
     borderRadius: 22,
-    padding: 13,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
     ...SOFT_TACTILE.shadow,
   },
   summaryNumber: {
-    fontSize: 22,
+    fontSize: 21,
     fontWeight: '800',
   },
   summaryLabel: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10.5,
+    lineHeight: 14,
     marginTop: 3,
     textAlign: 'center',
     fontWeight: '600',
@@ -252,15 +269,22 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 999,
+    flexShrink: 0,
+  },
+  batchTitleWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   batchTitle: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '800',
   },
   batchTemp: {
     color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 11.5,
+    lineHeight: 15,
     marginTop: 2,
   },
   countBadge: {
@@ -268,6 +292,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
+    flexShrink: 0,
   },
   countBadgeText: {
     color: SOFT_TACTILE.colors.textPrimary,
@@ -296,6 +321,12 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: 12,
     backgroundColor: SOFT_TACTILE.colors.recessed,
+    flexShrink: 0,
+  },
+  itemInfoWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   itemName: {
     color: SOFT_TACTILE.colors.textPrimary,
@@ -305,6 +336,7 @@ const styles = StyleSheet.create({
   itemReason: {
     color: SOFT_TACTILE.colors.clayRed,
     fontSize: 11,
+    lineHeight: 15,
     marginTop: 2,
     fontWeight: '600',
   },
@@ -316,6 +348,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    flexShrink: 0,
   },
   singleWashBtnText: {
     color: '#FFFFFF',
@@ -344,6 +377,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 7,
     borderRadius: 999,
+    flexShrink: 0,
   },
   optionalWashBtnText: {
     color: SOFT_TACTILE.colors.textPrimary,
@@ -354,6 +388,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     backgroundColor: SOFT_TACTILE.colors.terracotta,
     paddingVertical: 13,
+    paddingHorizontal: 12,
     borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
@@ -364,5 +399,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

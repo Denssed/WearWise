@@ -100,12 +100,13 @@ export default function ProfileAndApiScreen() {
                     : SOFT_TACTILE.colors.terracotta
                 }
               />
-              <View style={{ flex: 1 }}>
+              <View style={styles.modeOptionTextWrap}>
                 <Text
                   style={[
                     styles.modeOptionTitle,
                     profile.profileMode === 'default' && { color: '#FFFFFF' },
                   ]}
+                  numberOfLines={1}
                 >
                   Perfil Default (Cápsula Equilibrada)
                 </Text>
@@ -114,6 +115,7 @@ export default function ProfileAndApiScreen() {
                     styles.modeOptionDesc,
                     profile.profileMode === 'default' && { color: '#FFFDF9' },
                   ]}
+                  numberOfLines={2}
                 >
                   Balance Smart Casual automático según el clima y ropa fresca
                 </Text>
@@ -136,12 +138,13 @@ export default function ProfileAndApiScreen() {
                     : SOFT_TACTILE.colors.sage
                 }
               />
-              <View style={{ flex: 1 }}>
+              <View style={styles.modeOptionTextWrap}>
                 <Text
                   style={[
                     styles.modeOptionTitle,
                     profile.profileMode === 'custom' && { color: '#FFFFFF' },
                   ]}
+                  numberOfLines={1}
                 >
                   Perfil Personalizado
                 </Text>
@@ -150,6 +153,7 @@ export default function ProfileAndApiScreen() {
                     styles.modeOptionDesc,
                     profile.profileMode === 'custom' && { color: '#FFFDF9' },
                   ]}
+                  numberOfLines={2}
                 >
                   Tus estilos, sensibilidad térmica y rutina de Lunes a Domingo
                 </Text>
@@ -215,7 +219,9 @@ export default function ProfileAndApiScreen() {
               </Text>
               {SCHEDULE_LABELS.map((day) => (
                 <View key={day.key} style={styles.scheduleRow}>
-                  <Text style={styles.scheduleDayLabel}>{day.label}</Text>
+                  <Text style={styles.scheduleDayLabel} numberOfLines={1}>
+                    {day.label}
+                  </Text>
                   <TextInput
                     style={styles.scheduleInput}
                     value={profile.weeklySchedule[day.key]}
@@ -292,7 +298,7 @@ export default function ProfileAndApiScreen() {
             onPress={handleSaveAndRegenerate}
           >
             <Ionicons name="sparkles" size={18} color="#FFFFFF" />
-            <Text style={styles.saveApplyBtnText}>
+            <Text style={styles.saveApplyBtnText} numberOfLines={2}>
               Guardar y Actualizar Sugerencias de la Semana
             </Text>
           </TouchableOpacity>
@@ -304,7 +310,7 @@ export default function ProfileAndApiScreen() {
                 size={18}
                 color={SOFT_TACTILE.colors.sage}
               />
-              <Text style={styles.savedToastText}>
+              <Text style={styles.savedToastText} numberOfLines={2}>
                 Configuración aplicada y semana recalculada con éxito.
               </Text>
             </View>
@@ -362,14 +368,20 @@ const styles = StyleSheet.create({
     backgroundColor: SOFT_TACTILE.colors.sage,
     borderColor: SOFT_TACTILE.colors.sage,
   },
+  modeOptionTextWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
+  },
   modeOptionTitle: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
   },
   modeOptionDesc: {
     color: SOFT_TACTILE.colors.textSecondary,
     fontSize: 12,
+    lineHeight: 16,
     marginTop: 2,
   },
   sectionCard: {
@@ -383,8 +395,11 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 16,
+    fontSize: 15.5,
     fontWeight: '800',
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   apiHeaderRow: {
     flexDirection: 'row',
@@ -417,6 +432,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
+    maxWidth: '100%',
   },
   chipSelected: {
     backgroundColor: SOFT_TACTILE.colors.terracotta,
@@ -439,12 +455,14 @@ const styles = StyleSheet.create({
   },
   scheduleDayLabel: {
     width: 78,
+    flexShrink: 0,
     color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 12.5,
     fontWeight: '800',
   },
   scheduleInput: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.canvas,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
@@ -466,7 +484,8 @@ const styles = StyleSheet.create({
   },
   saveApplyBtn: {
     backgroundColor: SOFT_TACTILE.colors.terracotta,
-    paddingVertical: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 14,
     borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -476,8 +495,10 @@ const styles = StyleSheet.create({
   },
   saveApplyBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '800',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   savedToast: {
     marginTop: 12,
@@ -491,7 +512,8 @@ const styles = StyleSheet.create({
   },
   savedToastText: {
     color: SOFT_TACTILE.colors.sage,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
+    flexShrink: 1,
   },
 });

@@ -222,8 +222,10 @@ export default function AddGarmentScreen() {
               onPress={() => handleCaptureOrPick(true)}
               disabled={isProcessing}
             >
-              <Ionicons name="camera" size={22} color="#FFFFFF" />
-              <Text style={styles.captureButtonText}>Tomar Foto</Text>
+              <Ionicons name="camera" size={20} color="#FFFFFF" />
+              <Text style={styles.captureButtonText} numberOfLines={1}>
+                Tomar Foto
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -233,7 +235,7 @@ export default function AddGarmentScreen() {
             >
               <Ionicons
                 name="images"
-                size={22}
+                size={20}
                 color={SOFT_TACTILE.colors.textPrimary}
               />
               <Text
@@ -241,6 +243,7 @@ export default function AddGarmentScreen() {
                   styles.captureButtonText,
                   { color: SOFT_TACTILE.colors.textPrimary },
                 ]}
+                numberOfLines={1}
               >
                 Subir de Galería
               </Text>
@@ -264,7 +267,9 @@ export default function AddGarmentScreen() {
                     size={13}
                     color={SOFT_TACTILE.colors.terracotta}
                   />
-                  <Text style={styles.demoBtnText}>{s.label}</Text>
+                  <Text style={styles.demoBtnText} numberOfLines={1}>
+                    {s.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -297,7 +302,9 @@ export default function AddGarmentScreen() {
                       size={12}
                       color={SOFT_TACTILE.colors.sage}
                     />
-                    <Text style={styles.engineBadgeText}>{bgEngineUsed}</Text>
+                    <Text style={styles.engineBadgeText} numberOfLines={1}>
+                      {bgEngineUsed}
+                    </Text>
                   </View>
                   <View style={styles.engineBadge}>
                     <Ionicons
@@ -305,7 +312,9 @@ export default function AddGarmentScreen() {
                       size={12}
                       color={SOFT_TACTILE.colors.terracotta}
                     />
-                    <Text style={styles.engineBadgeText}>{aiEngineUsed}</Text>
+                    <Text style={styles.engineBadgeText} numberOfLines={1}>
+                      {aiEngineUsed}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -346,8 +355,10 @@ export default function AddGarmentScreen() {
               </View>
 
               <View style={styles.twoColRow}>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Colores detectados</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>
+                    Colores detectados
+                  </Text>
                   <TextInput
                     style={styles.input}
                     value={colorsText}
@@ -356,8 +367,10 @@ export default function AddGarmentScreen() {
                     placeholderTextColor={SOFT_TACTILE.colors.textMuted}
                   />
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.fieldLabel}>Tela / Material</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.fieldLabel} numberOfLines={1}>
+                    Tela / Material
+                  </Text>
                   <TextInput
                     style={styles.input}
                     value={fabric}
@@ -421,7 +434,7 @@ export default function AddGarmentScreen() {
                 onPress={handleSaveToWardrobe}
               >
                 <Ionicons name="checkmark-circle" size={20} color="#FFFFFF" />
-                <Text style={styles.saveGarmentBtnText}>
+                <Text style={styles.saveGarmentBtnText} numberOfLines={1}>
                   Guardar Prenda en Mi Cápsula
                 </Text>
               </TouchableOpacity>
@@ -459,36 +472,41 @@ const styles = StyleSheet.create({
   },
   captureButtonsRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 10,
     marginBottom: 14,
   },
   cameraButton: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.terracotta,
-    paddingVertical: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
     borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 7,
     ...SOFT_TACTILE.shadow,
   },
   galleryButton: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.card,
-    paddingVertical: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
     borderRadius: 22,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 7,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
   },
   captureButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '800',
+    flexShrink: 1,
   },
   demoStrip: {
     backgroundColor: SOFT_TACTILE.colors.card,
@@ -506,6 +524,7 @@ const styles = StyleSheet.create({
   },
   demoBtnsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
   },
   demoBtn: {
@@ -516,11 +535,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
+    maxWidth: '100%',
   },
   demoBtnText: {
     color: SOFT_TACTILE.colors.terracotta,
     fontSize: 12,
     fontWeight: '800',
+    flexShrink: 1,
   },
   processingCard: {
     backgroundColor: SOFT_TACTILE.colors.card,
@@ -565,6 +586,8 @@ const styles = StyleSheet.create({
   },
   engineBadgesRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 8,
   },
   engineBadge: {
@@ -577,11 +600,13 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
+    maxWidth: '100%',
   },
   engineBadgeText: {
     color: SOFT_TACTILE.colors.textPrimary,
     fontSize: 11,
     fontWeight: '700',
+    flexShrink: 1,
   },
   fieldLabel: {
     color: SOFT_TACTILE.colors.textPrimary,
@@ -634,6 +659,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     backgroundColor: SOFT_TACTILE.colors.sage,
     paddingVertical: 15,
+    paddingHorizontal: 12,
     borderRadius: 18,
     flexDirection: 'row',
     alignItems: 'center',
@@ -642,7 +668,8 @@ const styles = StyleSheet.create({
   },
   saveGarmentBtnText: {
     color: '#FFFFFF',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '800',
+    flexShrink: 1,
   },
 });

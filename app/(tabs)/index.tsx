@@ -65,9 +65,9 @@ export default function WeeklyPlannerScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* HEADER SOFT TACTILE */}
+        {/* HEADER SOFT TACTILE (Sin desbordamiento en pantallas compactas) */}
         <View style={styles.headerRow}>
-          <View style={{ flex: 1 }}>
+          <View style={styles.headerLeft}>
             <View style={styles.brandRow}>
               <Text style={styles.appTitle}>WearWise</Text>
               <View
@@ -88,6 +88,7 @@ export default function WeeklyPlannerScreen() {
                   }
                 />
                 <Text
+                  numberOfLines={1}
                   style={[
                     styles.modeBadgeText,
                     {
@@ -98,13 +99,11 @@ export default function WeeklyPlannerScreen() {
                     },
                   ]}
                 >
-                  {profile.profileMode === 'custom'
-                    ? 'Cápsula Personalizada'
-                    : 'Cápsula Default'}
+                  {profile.profileMode === 'custom' ? 'Personalizada' : 'Default'}
                 </Text>
               </View>
             </View>
-            <Text style={styles.subtitle}>
+            <Text style={styles.subtitle} numberOfLines={1}>
               Hola, {profile.displayName} · Curaduría por Claude Haiku 5.5
             </Text>
           </View>
@@ -125,7 +124,7 @@ export default function WeeklyPlannerScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* PÍLDORAS TÁCTILES DE ESTADO DEL ARMARIO */}
+        {/* TARJETAS DE ESTADO + BOTÓN DE SUGERENCIA SEMANAL */}
         <View style={styles.metricsRow}>
           <TouchableOpacity
             style={styles.metricCard}
@@ -139,13 +138,17 @@ export default function WeeklyPlannerScreen() {
             >
               <Ionicons
                 name="checkmark-circle"
-                size={20}
+                size={19}
                 color={SOFT_TACTILE.colors.sage}
               />
             </View>
-            <View>
-              <Text style={styles.metricValue}>{cleanCount}</Text>
-              <Text style={styles.metricLabel}>Prendas frescas</Text>
+            <View style={styles.metricTextCol}>
+              <Text style={styles.metricValue} numberOfLines={1}>
+                {cleanCount}
+              </Text>
+              <Text style={styles.metricLabel} numberOfLines={1}>
+                Frescas
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -166,7 +169,7 @@ export default function WeeklyPlannerScreen() {
             >
               <Ionicons
                 name="water"
-                size={20}
+                size={19}
                 color={
                   dirtyCount > 0
                     ? SOFT_TACTILE.colors.clayRed
@@ -174,16 +177,19 @@ export default function WeeklyPlannerScreen() {
                 }
               />
             </View>
-            <View>
+            <View style={styles.metricTextCol}>
               <Text
                 style={[
                   styles.metricValue,
                   dirtyCount > 0 && { color: SOFT_TACTILE.colors.clayRed },
                 ]}
+                numberOfLines={1}
               >
                 {dirtyCount}
               </Text>
-              <Text style={styles.metricLabel}>En cesto</Text>
+              <Text style={styles.metricLabel} numberOfLines={1}>
+                En cesto
+              </Text>
             </View>
           </TouchableOpacity>
 
@@ -196,8 +202,10 @@ export default function WeeklyPlannerScreen() {
               <ActivityIndicator size="small" color="#FFFFFF" />
             ) : (
               <>
-                <Ionicons name="sparkles" size={16} color="#FFFFFF" />
-                <Text style={styles.generateButtonText}>Armar Semana</Text>
+                <Ionicons name="sparkles" size={15} color="#FFFFFF" />
+                <Text style={styles.generateButtonText} numberOfLines={1}>
+                  Armar Semana
+                </Text>
               </>
             )}
           </TouchableOpacity>
@@ -212,8 +220,12 @@ export default function WeeklyPlannerScreen() {
                 size={14}
                 color={SOFT_TACTILE.colors.terracotta}
               />
-              <Text style={styles.aiSummaryTitle}>
-                Nota del Estilista ({weeklyPlan.generatedBy === 'claude_haiku' ? 'Claude Haiku 5.5' : 'Curaduría Local'})
+              <Text style={styles.aiSummaryTitle} numberOfLines={1}>
+                Nota del Estilista (
+                {weeklyPlan.generatedBy === 'claude_haiku'
+                  ? 'Claude Haiku 5.5'
+                  : 'Curaduría Local'}
+                )
               </Text>
             </View>
             <Text style={styles.aiSummaryText}>{weeklyPlan.claudeSummary}</Text>
@@ -242,13 +254,14 @@ export default function WeeklyPlannerScreen() {
                       styles.dayPillName,
                       isSelected && styles.dayPillNameActive,
                     ]}
+                    numberOfLines={1}
                   >
                     {day.dayName.slice(0, 3)}
                   </Text>
                   {day.wornConfirmed ? (
                     <Ionicons
                       name="checkmark-circle"
-                      size={14}
+                      size={13}
                       color={isSelected ? '#FFFFFF' : SOFT_TACTILE.colors.sage}
                     />
                   ) : null}
@@ -258,7 +271,7 @@ export default function WeeklyPlannerScreen() {
                   name={w?.icon || 'partly-sunny'}
                   size={20}
                   color={isSelected ? '#FFFFFF' : SOFT_TACTILE.colors.textSecondary}
-                  style={{ marginVertical: 6 }}
+                  style={{ marginVertical: 5 }}
                 />
 
                 <Text
@@ -266,6 +279,7 @@ export default function WeeklyPlannerScreen() {
                     styles.dayTempText,
                     isSelected && { color: '#FFFDF9' },
                   ]}
+                  numberOfLines={1}
                 >
                   {w ? `${w.tempMin}° / ${w.tempMax}°` : '15° / 24°'}
                 </Text>
@@ -275,6 +289,7 @@ export default function WeeklyPlannerScreen() {
                       styles.rainBadge,
                       isSelected && { color: '#FDE68A' },
                     ]}
+                    numberOfLines={1}
                   >
                     {w.rainProbability}% lluvia
                   </Text>
@@ -288,11 +303,13 @@ export default function WeeklyPlannerScreen() {
         {activeDayPlan ? (
           <View style={styles.outfitCard}>
             <View style={styles.outfitHeader}>
-              <View style={{ flex: 1 }}>
+              <View style={styles.outfitHeaderLeft}>
                 <View style={styles.occasionRow}>
                   <Text style={styles.dayFullLabel}>{activeDayPlan.dayName}</Text>
                   <View style={styles.occasionTag}>
-                    <Text style={styles.occasionTagText}>{activeDayPlan.occasion}</Text>
+                    <Text style={styles.occasionTagText} numberOfLines={1}>
+                      {activeDayPlan.occasion}
+                    </Text>
                   </View>
                 </View>
                 <Text style={styles.outfitTitle}>{activeDayPlan.outfitTitle}</Text>
@@ -302,7 +319,7 @@ export default function WeeklyPlannerScreen() {
                 <View style={styles.weatherDetailBox}>
                   <Ionicons
                     name={activeWeather.icon}
-                    size={22}
+                    size={20}
                     color={SOFT_TACTILE.colors.ochre}
                   />
                   <Text style={styles.weatherDetailTemp}>
@@ -335,21 +352,21 @@ export default function WeeklyPlannerScreen() {
                           isDirty ? styles.wearPillDirty : styles.wearPillClean,
                         ]}
                       >
-                        <Text style={styles.wearPillText}>
+                        <Text style={styles.wearPillText} numberOfLines={1}>
                           {isDirty
                             ? 'Lavar ya'
-                            : `${remaining} ${remaining === 1 ? 'puesta libre' : 'puestas libres'}`}
+                            : `${remaining} ${remaining === 1 ? 'libre' : 'libres'}`}
                         </Text>
                       </View>
                     </View>
-                    <Text style={styles.garmentItemCategory}>
+                    <Text style={styles.garmentItemCategory} numberOfLines={1}>
                       {CATEGORY_LABELS[item.category]}
                     </Text>
-                    <Text style={styles.garmentItemName} numberOfLines={1}>
+                    <Text style={styles.garmentItemName} numberOfLines={2}>
                       {item.name}
                     </Text>
-                    <Text style={styles.garmentWearCounter}>
-                      Usos: {item.current_wears}/{item.max_wears_before_wash} antes de lavar
+                    <Text style={styles.garmentWearCounter} numberOfLines={1}>
+                      Usos: {item.current_wears}/{item.max_wears_before_wash}
                     </Text>
                   </View>
                 );
@@ -363,6 +380,7 @@ export default function WeeklyPlannerScreen() {
                   name="sparkles-outline"
                   size={16}
                   color={SOFT_TACTILE.colors.terracotta}
+                  style={{ marginTop: 2 }}
                 />
                 <Text style={styles.tipText}>{activeDayPlan.stylingTip}</Text>
               </View>
@@ -371,6 +389,7 @@ export default function WeeklyPlannerScreen() {
                   name="thermometer-outline"
                   size={16}
                   color={SOFT_TACTILE.colors.waterBlue}
+                  style={{ marginTop: 2 }}
                 />
                 <Text style={styles.tipText}>{activeDayPlan.weatherNote}</Text>
               </View>
@@ -385,7 +404,7 @@ export default function WeeklyPlannerScreen() {
                   color={SOFT_TACTILE.colors.sage}
                 />
                 <Text style={styles.wornConfirmedText}>
-                  Look registrado hoy · Frescura del armario actualizada
+                  Look registrado hoy · Frescura actualizada
                 </Text>
               </View>
             ) : (
@@ -395,7 +414,9 @@ export default function WeeklyPlannerScreen() {
                   onPress={() => logDayOutfitWear(activeDayPlan.dayIndex, false)}
                 >
                   <Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />
-                  <Text style={styles.wearTodayBtnText}>¡Me puse este outfit!</Text>
+                  <Text style={styles.wearTodayBtnText} numberOfLines={1}>
+                    ¡Me puse este outfit!
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -404,10 +425,12 @@ export default function WeeklyPlannerScreen() {
                 >
                   <Ionicons
                     name="water-outline"
-                    size={18}
+                    size={17}
                     color={SOFT_TACTILE.colors.clayRed}
                   />
-                  <Text style={styles.forceWashBtnText}>A lavar</Text>
+                  <Text style={styles.forceWashBtnText} numberOfLines={1}>
+                    A lavar
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -427,33 +450,40 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    padding: 18,
+    padding: 16,
     paddingBottom: 38,
   },
   headerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 14,
+  },
+  headerLeft: {
+    flex: 1,
+    minWidth: 0,
   },
   brandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   appTitle: {
-    fontSize: 27,
+    fontSize: 25,
     fontWeight: '800',
     color: SOFT_TACTILE.colors.textPrimary,
-    letterSpacing: -0.6,
+    letterSpacing: -0.5,
   },
   modeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
     borderRadius: 999,
+    maxWidth: '100%',
   },
   modeBadgeDefault: {
     backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
@@ -464,85 +494,98 @@ const styles = StyleSheet.create({
   modeBadgeText: {
     fontSize: 11,
     fontWeight: '700',
+    flexShrink: 1,
   },
   subtitle: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12.5,
     marginTop: 3,
   },
   weatherChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     backgroundColor: SOFT_TACTILE.colors.card,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
     borderRadius: 999,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
-    maxWidth: 145,
+    maxWidth: 132,
+    flexShrink: 0,
   },
   weatherChipText: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
+    flexShrink: 1,
   },
   metricsRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
+    alignItems: 'stretch',
+    gap: 8,
     marginBottom: 16,
   },
   metricCard: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
     backgroundColor: SOFT_TACTILE.colors.card,
-    padding: 12,
-    borderRadius: 22,
+    paddingHorizontal: 10,
+    paddingVertical: 11,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
     ...SOFT_TACTILE.shadow,
   },
   metricIconWrap: {
-    width: 38,
-    height: 38,
-    borderRadius: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
+  },
+  metricTextCol: {
+    flex: 1,
+    minWidth: 0,
   },
   metricValue: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
   },
   metricLabel: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 11,
+    fontSize: 10.5,
+    fontWeight: '600',
   },
   generateButton: {
     backgroundColor: SOFT_TACTILE.colors.terracotta,
-    paddingHorizontal: 15,
-    paddingVertical: 15,
-    borderRadius: 22,
+    paddingHorizontal: 13,
+    paddingVertical: 11,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    justifyContent: 'center',
+    gap: 5,
+    flexShrink: 0,
     ...SOFT_TACTILE.shadow,
   },
   generateButtonText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   aiSummaryBox: {
     backgroundColor: SOFT_TACTILE.colors.terracottaSoft,
     borderRadius: 22,
-    padding: 14,
+    padding: 13,
     borderWidth: 1,
     borderColor: '#E8C5B8',
-    marginBottom: 18,
+    marginBottom: 16,
   },
   aiSummaryHeader: {
     flexDirection: 'row',
@@ -551,33 +594,34 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   aiSummaryTitle: {
+    flex: 1,
     color: SOFT_TACTILE.colors.terracotta,
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '800',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
+    letterSpacing: 0.3,
   },
   aiSummaryText: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: 12.5,
+    lineHeight: 18,
   },
   sectionTitle: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 17,
+    fontSize: 16.5,
     fontWeight: '800',
     marginBottom: 10,
   },
   daysScroll: {
-    gap: 10,
+    gap: 8,
     paddingBottom: 14,
   },
   dayPill: {
-    width: 80,
+    width: 78,
     backgroundColor: SOFT_TACTILE.colors.card,
-    borderRadius: 24,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderRadius: 22,
+    paddingVertical: 11,
+    paddingHorizontal: 6,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
@@ -589,11 +633,11 @@ const styles = StyleSheet.create({
   dayPillHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 3,
   },
   dayPillName: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
   },
   dayPillNameActive: {
@@ -601,19 +645,19 @@ const styles = StyleSheet.create({
   },
   dayTempText: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
   },
   rainBadge: {
-    marginTop: 3,
-    fontSize: 9.5,
+    marginTop: 2,
+    fontSize: 9,
     color: SOFT_TACTILE.colors.waterBlue,
     fontWeight: '700',
   },
   outfitCard: {
     backgroundColor: SOFT_TACTILE.colors.card,
-    borderRadius: 28,
-    padding: 18,
+    borderRadius: 26,
+    padding: 15,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
     ...SOFT_TACTILE.shadow,
@@ -622,17 +666,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    gap: 10,
     marginBottom: 14,
+  },
+  outfitHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
   },
   occasionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 5,
   },
   dayFullLabel: {
     color: SOFT_TACTILE.colors.terracotta,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
@@ -641,6 +691,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 9,
     paddingVertical: 3,
     borderRadius: 999,
+    maxWidth: '100%',
+    flexShrink: 1,
   },
   occasionTagText: {
     color: SOFT_TACTILE.colors.textSecondary,
@@ -649,43 +701,46 @@ const styles = StyleSheet.create({
   },
   outfitTitle: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '800',
+    lineHeight: 23,
   },
   weatherDetailBox: {
     alignItems: 'center',
     backgroundColor: SOFT_TACTILE.colors.ochreSoft,
-    paddingHorizontal: 11,
+    paddingHorizontal: 10,
     paddingVertical: 7,
-    borderRadius: 16,
+    borderRadius: 15,
+    flexShrink: 0,
   },
   weatherDetailTemp: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     marginTop: 2,
   },
   garmentGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    justifyContent: 'space-between',
+    rowGap: 10,
     marginBottom: 14,
   },
   outfitGarmentCard: {
-    width: '48%',
+    width: '48.2%',
     backgroundColor: SOFT_TACTILE.colors.canvas,
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: 18,
+    padding: 9,
     borderWidth: 1,
     borderColor: SOFT_TACTILE.colors.border,
   },
   cutoutImageBox: {
     width: '100%',
-    height: 132,
-    borderRadius: 16,
+    height: 124,
+    borderRadius: 14,
     backgroundColor: SOFT_TACTILE.colors.recessed,
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: 7,
     position: 'relative',
   },
   cutoutImage: {
@@ -694,10 +749,11 @@ const styles = StyleSheet.create({
   },
   wearPillOverlay: {
     position: 'absolute',
-    bottom: 7,
-    right: 7,
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
+    bottom: 6,
+    right: 6,
+    maxWidth: '88%',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 999,
   },
   wearPillClean: {
@@ -708,30 +764,32 @@ const styles = StyleSheet.create({
   },
   wearPillText: {
     color: '#FFFFFF',
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '700',
   },
   garmentItemCategory: {
     color: SOFT_TACTILE.colors.terracotta,
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     textTransform: 'uppercase',
   },
   garmentItemName: {
     color: SOFT_TACTILE.colors.textPrimary,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
     marginTop: 2,
+    minHeight: 32,
+    lineHeight: 16,
   },
   garmentWearCounter: {
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 11,
-    marginTop: 3,
+    fontSize: 10.5,
+    marginTop: 2,
   },
   tipsContainer: {
     backgroundColor: SOFT_TACTILE.colors.canvas,
-    borderRadius: 18,
-    padding: 13,
+    borderRadius: 16,
+    padding: 12,
     gap: 8,
     marginBottom: 14,
     borderWidth: 1,
@@ -744,19 +802,22 @@ const styles = StyleSheet.create({
   },
   tipText: {
     flex: 1,
+    minWidth: 0,
     color: SOFT_TACTILE.colors.textSecondary,
-    fontSize: 12.5,
-    lineHeight: 18,
+    fontSize: 12,
+    lineHeight: 17,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 8,
   },
   wearTodayBtn: {
     flex: 2,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.sage,
-    paddingVertical: 14,
-    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 10,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -764,39 +825,44 @@ const styles = StyleSheet.create({
   },
   wearTodayBtnText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '800',
+    flexShrink: 1,
   },
   forceWashBtn: {
     flex: 1,
+    minWidth: 0,
     backgroundColor: SOFT_TACTILE.colors.clayRedSoft,
-    paddingVertical: 14,
-    borderRadius: 18,
+    paddingVertical: 13,
+    paddingHorizontal: 8,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
     borderWidth: 1,
     borderColor: '#EABCB7',
   },
   forceWashBtnText: {
     color: SOFT_TACTILE.colors.clayRed,
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
+    flexShrink: 1,
   },
   wornConfirmedBanner: {
     backgroundColor: SOFT_TACTILE.colors.sageSoft,
-    borderRadius: 18,
-    paddingVertical: 13,
-    paddingHorizontal: 14,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
   wornConfirmedText: {
+    flex: 1,
     color: SOFT_TACTILE.colors.sage,
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '800',
   },
 });
