@@ -1,31 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { ApiSettings, Garment, UserProfile, WeeklyPlan } from '../types/wardrobe';
+import { ENV, isSupabaseConfigured } from '../config/env';
+import { parseRemoteGarments } from '../storage/schemas';
+import { Garment, UserProfile, WeeklyPlan } from '../types/wardrobe';
 
 let supabaseInstance: SupabaseClient | null = null;
-let currentConfiguredUrl = '';
 
-const DEFAULT_SUPABASE_URL = 'https://gnhsmapjozmxpmhtudgx.supabase.co';
-const DEFAULT_SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduaHNtYXBqb3pteHBtaHR1ZGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMzU5ODMsImV4cCI6MjEwOTkxMTk4M30.mS7472u9Tk_ScgBc1xhEDAxyENcEsA32LMJ30PEi7j0';
-
-export function getSupabaseClient(settings?: Partial<ApiSettings>): SupabaseClient | null {
-  const url =
-    settings?.supabaseUrl ||
-    process.env.EXPO_PUBLIC_SUPABASE_URL ||
-    DEFAULT_SUPABASE_URL;
-  const anonKey =
-    settings?.supabaseAnonKey ||
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-    DEFAULT_SUPABASE_ANON_KEY;
-
-  if (!url || !anonKey || url.includes('tu-proyecto')) {
+export function getSupabaseClient(): SupabaseClient | null {
+  if (!isSupabaseConfigured()) {
     return null;
   }
 
-  if (!supabaseInstance || currentConfiguredUrl !== url) {
-    currentConfiguredUrl = url;
-    supabaseInstance = createClient(url, anonKey, {
+  if (!supabaseInstance) {
+    supabaseInstance = createClient(ENV.supabaseUrl, ENV.supabaseAnonKey, {
       auth: {
         storage: AsyncStorage,
         autoRefreshToken: true,
@@ -48,7 +35,7 @@ export async function syncGarmentsFromSupabase(
       .order('created_at', { ascending: false });
 
     if (error || !data) return null;
-    return data as Garment[];
+    return parseRemoteGarments(data);
   } catch {
     return null;
   }

@@ -37,7 +37,7 @@ export default function TabsLayout() {
         options={{
           title: 'Semana IA',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="sparkles-outline" size={size} color={color} />
+            <Ionicons name="sparkles-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -46,7 +46,7 @@ export default function TabsLayout() {
         options={{
           title: 'Armario',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="shirt-outline" size={size} color={color} />
+            <Ionicons name="shirt-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -55,7 +55,7 @@ export default function TabsLayout() {
         options={{
           title: 'Escanear',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="camera-outline" size={size + 2} color={color} />
+            <Ionicons name="camera-outline" size={size + 2} color={color as string} />
           ),
         }}
       />
@@ -71,7 +71,7 @@ export default function TabsLayout() {
             fontWeight: '700',
           },
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="water-outline" size={size} color={color} />
+            <Ionicons name="water-outline" size={size} color={color as string} />
           ),
         }}
       />
@@ -80,7 +80,7 @@ export default function TabsLayout() {
         options={{
           title: 'Perfil',
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person-circle-outline" size={size} color={color} />
+            <Ionicons name="person-circle-outline" size={size} color={color as string} />
           ),
         }}
       />

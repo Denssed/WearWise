@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { DEFAULT_USER_PROFILE, INITIAL_GARMENTS } from '../data/initialWardrobe';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { DEFAULT_USER_PROFILE } from '../data/initialWardrobe';
 import {
   buildSmartLocalWeeklyPlan,
   generateWeeklyOutfitsWithAI,
@@ -13,28 +13,27 @@ import {
   upsertProfileToSupabase,
 } from '../services/supabase';
 import { fetchSevenDayWeather, requestUserCoordinates } from '../services/weather';
+import { storageKeys } from '../storage/keys';
+import { migrateLegacyData } from '../storage/legacyMigration';
 import {
-  ApiSettings,
+  parseStoredGarments,
+  parseStoredPlan,
+  parseStoredProfile,
+} from '../storage/schemas';
+import {
   Garment,
   UserProfile,
   WashCareGroup,
   WeatherDay,
   WeeklyPlan,
 } from '../types/wardrobe';
-
-const STORAGE_KEYS = {
-  GARMENTS: '@wearwise/garments_v1',
-  PROFILE: '@wearwise/profile_v1',
-  WEEKLY_PLAN: '@wearwise/weekly_plan_v1',
-  API_SETTINGS: '@wearwise/api_settings_v1',
-};
+import { newId } from '../utils/id';
 
 interface WardrobeContextValue {
   garments: Garment[];
   profile: UserProfile;
   weather: WeatherDay[];
   weeklyPlan: WeeklyPlan | null;
-  apiSettings: ApiSettings;
   isGeneratingPlan: boolean;
   isLoadingWeather: boolean;
   addGarment: (newGarment: Omit<Garment, 'id' | 'created_at'>) => Promise<Garment>;
@@ -45,76 +44,86 @@ interface WardrobeContextValue {
   washGarmentsByIds: (ids: string[]) => Promise<void>;
   washBatchByGroup: (group: WashCareGroup) => Promise<void>;
   updateProfile: (updated: Partial<UserProfile>) => Promise<void>;
-  updateApiSettings: (updated: Partial<ApiSettings>) => Promise<void>;
   regenerateWeeklyPlan: () => Promise<void>;
   refreshLocationAndWeather: () => Promise<void>;
 }
 
 const WardrobeContext = createContext<WardrobeContextValue | undefined>(undefined);
 
-const DEFAULT_API_SETTINGS: ApiSettings = {
-  supabaseUrl:
-    process.env.EXPO_PUBLIC_SUPABASE_URL ||
-    'https://gnhsmapjozmxpmhtudgx.supabase.co',
-  supabaseAnonKey:
-    process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImduaHNtYXBqb3pteHBtaHR1ZGd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQzMzU5ODMsImV4cCI6MjEwOTkxMTk4M30.mS7472u9Tk_ScgBc1xhEDAxyENcEsA32LMJ30PEi7j0',
-  replicateApiToken: '',
-  replicateBgVersion:
-    'a029dff38972b5fda4ec5d75d7d1cd25aeff621d2cf4946a41055d7db66b80bc',
-  claudeApiKey: '',
-  claudeModel: 'claude-haiku-4-5-20251001',
-};
+interface WardrobeProviderProps {
+  children: React.ReactNode;
+  /** Usuario autenticado. `null` = sin sesión: no se carga ni se guarda nada. */
+  userId: string | null;
+  /** Nombre inicial sugerido para el perfil de una cuenta nueva (nombre de Google/Apple o parte del email). */
+  suggestedDisplayName?: string;
+}
 
-export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [garments, setGarments] = useState<Garment[]>(INITIAL_GARMENTS);
-  const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
+export const WardrobeProvider: React.FC<WardrobeProviderProps> = ({
+  children,
+  userId,
+  suggestedDisplayName = '',
+}) => {
+  const [garments, setGarments] = useState<Garment[]>([]);
+  const [profile, setProfile] = useState<UserProfile>({
+    ...DEFAULT_USER_PROFILE,
+    displayName: suggestedDisplayName,
+  });
   const [weather, setWeather] = useState<WeatherDay[]>([]);
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
-  const [apiSettings, setApiSettings] = useState<ApiSettings>(DEFAULT_API_SETTINGS);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
 
-  // Carga inicial desde AsyncStorage + Clima + Supabase si está activo
+  // Al cambiar de usuario se parte siempre de un estado limpio (nunca se mezclan datos de dos cuentas).
+  const [stateOwner, setStateOwner] = useState<string | null>(userId);
+  if (stateOwner !== userId) {
+    setStateOwner(userId);
+    setGarments([]);
+    setProfile({ ...DEFAULT_USER_PROFILE, displayName: suggestedDisplayName });
+    setWeather([]);
+    setWeeklyPlan(null);
+  }
+
+  const keys = useMemo(() => (userId ? storageKeys(userId) : null), [userId]);
+
+  // Carga inicial por usuario: AsyncStorage (+ migración legacy) → Supabase → clima.
   useEffect(() => {
+    let cancelled = false;
+    if (!userId) return;
+    const keys = storageKeys(userId);
+
     (async () => {
       try {
-        const [storedGarments, storedProfile, storedPlan, storedSettings] =
-          await Promise.all([
-            AsyncStorage.getItem(STORAGE_KEYS.GARMENTS),
-            AsyncStorage.getItem(STORAGE_KEYS.PROFILE),
-            AsyncStorage.getItem(STORAGE_KEYS.WEEKLY_PLAN),
-            AsyncStorage.getItem(STORAGE_KEYS.API_SETTINGS),
-          ]);
+        await migrateLegacyData(AsyncStorage, userId, newId);
 
-        let activeGarments = INITIAL_GARMENTS;
-        let activeProfile = DEFAULT_USER_PROFILE;
-        let activeSettings = DEFAULT_API_SETTINGS;
+        const [storedGarments, storedProfile, storedPlan] = await Promise.all([
+          AsyncStorage.getItem(keys.garments),
+          AsyncStorage.getItem(keys.profile),
+          AsyncStorage.getItem(keys.weeklyPlan),
+        ]);
+        if (cancelled) return;
 
-        if (storedGarments) {
-          activeGarments = JSON.parse(storedGarments);
-          setGarments(activeGarments);
-        }
-        if (storedProfile) {
-          activeProfile = { ...DEFAULT_USER_PROFILE, ...JSON.parse(storedProfile) };
-          setProfile(activeProfile);
-        }
-        if (storedSettings) {
-          activeSettings = { ...DEFAULT_API_SETTINGS, ...JSON.parse(storedSettings) };
-          setApiSettings(activeSettings);
-        }
+        let activeGarments: Garment[] = parseStoredGarments(storedGarments) ?? [];
+        const parsedProfile = parseStoredProfile(storedProfile);
+        const activeProfile: UserProfile = {
+          ...DEFAULT_USER_PROFILE,
+          displayName: suggestedDisplayName,
+          ...(parsedProfile ?? {}),
+        };
+        setGarments(activeGarments);
+        setProfile(activeProfile);
 
-        // Sincronizar con Supabase si está configurado
-        const supabase = getSupabaseClient(activeSettings);
+        const supabase = getSupabaseClient();
         if (supabase) {
           const remoteGarments = await syncGarmentsFromSupabase(supabase);
+          if (cancelled) return;
           if (remoteGarments && remoteGarments.length > 0) {
             activeGarments = remoteGarments;
             setGarments(remoteGarments);
-            await AsyncStorage.setItem(
-              STORAGE_KEYS.GARMENTS,
-              JSON.stringify(remoteGarments)
-            );
+            await AsyncStorage.setItem(keys.garments, JSON.stringify(remoteGarments));
+          }
+          // Garantiza que exista la fila de perfil de la cuenta.
+          if (!parsedProfile) {
+            await upsertProfileToSupabase(supabase, activeProfile);
           }
         }
 
@@ -123,53 +132,67 @@ export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           activeProfile.latitude,
           activeProfile.longitude
         );
+        if (cancelled) return;
         setWeather(forecast);
         setIsLoadingWeather(false);
 
-        if (storedPlan) {
-          setWeeklyPlan(JSON.parse(storedPlan));
+        const cachedPlan = parseStoredPlan(storedPlan);
+        if (cachedPlan) {
+          setWeeklyPlan(cachedPlan);
         } else {
           const clean = activeGarments.filter(
             (g) => g.status === 'clean' && g.current_wears < g.max_wears_before_wash
           );
           const initialPlan = buildSmartLocalWeeklyPlan(clean, activeProfile, forecast);
           setWeeklyPlan(initialPlan);
-          await AsyncStorage.setItem(
-            STORAGE_KEYS.WEEKLY_PLAN,
-            JSON.stringify(initialPlan)
-          );
+          await AsyncStorage.setItem(keys.weeklyPlan, JSON.stringify(initialPlan));
         }
       } catch (e) {
         console.warn('Error cargando estado inicial de WearWise:', e);
+        if (!cancelled) setIsLoadingWeather(false);
       }
     })();
-  }, []);
+
+    return () => {
+      cancelled = true;
+    };
+    // suggestedDisplayName solo se usa al crear el estado inicial de una cuenta.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const persistGarments = useCallback(
     async (updated: Garment[]) => {
       setGarments(updated);
-      await AsyncStorage.setItem(STORAGE_KEYS.GARMENTS, JSON.stringify(updated));
+      if (keys) await AsyncStorage.setItem(keys.garments, JSON.stringify(updated));
     },
-    []
+    [keys]
+  );
+
+  const persistPlan = useCallback(
+    async (plan: WeeklyPlan) => {
+      setWeeklyPlan(plan);
+      if (keys) await AsyncStorage.setItem(keys.weeklyPlan, JSON.stringify(plan));
+    },
+    [keys]
   );
 
   const addGarment = useCallback(
     async (newGarmentData: Omit<Garment, 'id' | 'created_at'>): Promise<Garment> => {
       const created: Garment = {
         ...newGarmentData,
-        id: `garment-${Date.now()}`,
+        id: newId(),
         created_at: new Date().toISOString(),
       };
       const next = [created, ...garments];
       await persistGarments(next);
 
-      const supabase = getSupabaseClient(apiSettings);
+      const supabase = getSupabaseClient();
       if (supabase) {
         await upsertGarmentToSupabase(supabase, created);
       }
       return created;
     },
-    [garments, apiSettings, persistGarments]
+    [garments, persistGarments]
   );
 
   const deleteGarment = useCallback(
@@ -247,10 +270,9 @@ export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       };
 
       await persistGarments(nextGarments);
-      setWeeklyPlan(nextPlan);
-      await AsyncStorage.setItem(STORAGE_KEYS.WEEKLY_PLAN, JSON.stringify(nextPlan));
+      await persistPlan(nextPlan);
     },
-    [weeklyPlan, garments, persistGarments]
+    [weeklyPlan, garments, persistGarments, persistPlan]
   );
 
   const washGarmentsByIds = useCallback(
@@ -294,23 +316,14 @@ export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     async (updated: Partial<UserProfile>) => {
       const nextProfile: UserProfile = { ...profile, ...updated };
       setProfile(nextProfile);
-      await AsyncStorage.setItem(STORAGE_KEYS.PROFILE, JSON.stringify(nextProfile));
+      if (keys) await AsyncStorage.setItem(keys.profile, JSON.stringify(nextProfile));
 
-      const supabase = getSupabaseClient(apiSettings);
+      const supabase = getSupabaseClient();
       if (supabase) {
         await upsertProfileToSupabase(supabase, nextProfile);
       }
     },
-    [profile, apiSettings]
-  );
-
-  const updateApiSettings = useCallback(
-    async (updated: Partial<ApiSettings>) => {
-      const nextSettings: ApiSettings = { ...apiSettings, ...updated };
-      setApiSettings(nextSettings);
-      await AsyncStorage.setItem(STORAGE_KEYS.API_SETTINGS, JSON.stringify(nextSettings));
-    },
-    [apiSettings]
+    [profile, keys]
   );
 
   const regenerateWeeklyPlan = useCallback(async () => {
@@ -322,23 +335,17 @@ export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           : await fetchSevenDayWeather(profile.latitude, profile.longitude);
       if (weather.length === 0) setWeather(activeWeather);
 
-      const newPlan = await generateWeeklyOutfitsWithAI(
-        garments,
-        profile,
-        activeWeather,
-        apiSettings
-      );
-      setWeeklyPlan(newPlan);
-      await AsyncStorage.setItem(STORAGE_KEYS.WEEKLY_PLAN, JSON.stringify(newPlan));
+      const newPlan = await generateWeeklyOutfitsWithAI(garments, profile, activeWeather);
+      await persistPlan(newPlan);
 
-      const supabase = getSupabaseClient(apiSettings);
+      const supabase = getSupabaseClient();
       if (supabase) {
         await saveWeeklyPlanToSupabase(supabase, newPlan);
       }
     } finally {
       setIsGeneratingPlan(false);
     }
-  }, [garments, profile, weather, apiSettings]);
+  }, [garments, profile, weather, persistPlan]);
 
   const refreshLocationAndWeather = useCallback(async () => {
     setIsLoadingWeather(true);
@@ -367,7 +374,6 @@ export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         profile,
         weather,
         weeklyPlan,
-        apiSettings,
         isGeneratingPlan,
         isLoadingWeather,
         addGarment,
@@ -378,7 +384,6 @@ export const WardrobeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         washGarmentsByIds,
         washBatchByGroup,
         updateProfile,
-        updateApiSettings,
         regenerateWeeklyPlan,
         refreshLocationAndWeather,
       }}

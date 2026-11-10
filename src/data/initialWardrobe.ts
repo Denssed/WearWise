@@ -1,7 +1,7 @@
 import { Garment, UserProfile } from '../types/wardrobe';
 
 export const DEFAULT_USER_PROFILE: UserProfile = {
-  displayName: 'Alex',
+  displayName: '',
   profileMode: 'default',
   styleArchetypes: ['Smart Casual', 'Minimalista', 'Urbano Contemporáneo'],
   preferredColors: ['Azul Marino', 'Blanco', 'Negro', 'Beige', 'Verde Olivo'],

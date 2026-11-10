@@ -60,7 +60,7 @@ const DEMO_SAMPLES = [
 
 export default function AddGarmentScreen() {
   const router = useRouter();
-  const { addGarment, apiSettings } = useWardrobe();
+  const { addGarment } = useWardrobe();
 
   const [sourceImageUri, setSourceImageUri] = useState<string | null>(null);
   const [cutoutImageUri, setCutoutImageUri] = useState<string | null>(null);
@@ -117,8 +117,7 @@ export default function AddGarmentScreen() {
       const aiResult = await processGarmentWithAI(
         asset.uri,
         asset.base64,
-        asset.mimeType || 'image/jpeg',
-        apiSettings
+        asset.mimeType || 'image/jpeg'
       );
 
       setCutoutImageUri(aiResult.cutoutImageUrl);

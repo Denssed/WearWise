@@ -96,15 +96,6 @@ export interface WeeklyPlan {
   createdAt: string;
 }
 
-export interface ApiSettings {
-  supabaseUrl: string;
-  supabaseAnonKey: string;
-  replicateApiToken: string;
-  replicateBgVersion: string;
-  claudeApiKey: string;
-  claudeModel: string;
-}
-
 export const CATEGORY_LABELS: Record<GarmentCategory, string> = {
   top: 'Parte Superior',
   bottom: 'Parte Inferior',

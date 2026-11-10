@@ -1,5 +1,5 @@
+import { newId } from '../utils/id';
 import {
-  ApiSettings,
   Garment,
   GarmentCategory,
   PlannedDayOutfit,
@@ -37,10 +37,9 @@ export interface GarmentAIAnalysisResult {
 export async function processGarmentWithAI(
   imageUri: string,
   imageBase64: string | null | undefined,
-  mimeType = 'image/jpeg',
-  settings: ApiSettings
+  mimeType = 'image/jpeg'
 ): Promise<GarmentAIAnalysisResult> {
-  const supabase = getSupabaseClient(settings);
+  const supabase = getSupabaseClient();
 
   if (supabase && imageBase64) {
     try {
@@ -99,14 +98,13 @@ export async function processGarmentWithAI(
 export async function generateWeeklyOutfitsWithAI(
   garments: Garment[],
   profile: UserProfile,
-  weather: WeatherDay[],
-  settings: ApiSettings
+  weather: WeatherDay[]
 ): Promise<WeeklyPlan> {
   const cleanGarments = garments.filter(
     (g) => g.status === 'clean' && g.current_wears < g.max_wears_before_wash
   );
 
-  const supabase = getSupabaseClient(settings);
+  const supabase = getSupabaseClient();
 
   if (supabase && cleanGarments.length >= 2) {
     try {
@@ -120,7 +118,7 @@ export async function generateWeeklyOutfitsWithAI(
 
       if (!error && Array.isArray(data?.days) && data.days.length > 0) {
         return {
-          id: `plan-${Date.now()}`,
+          id: newId(),
           weekStartDate: weather[0]?.date || new Date().toISOString().split('T')[0],
           profileModeUsed: profile.profileMode,
           claudeSummary:
@@ -212,7 +210,7 @@ export function buildSmartLocalWeeklyPlan(
   });
 
   return {
-    id: `plan-${Date.now()}`,
+    id: newId(),
     weekStartDate: weather[0]?.date || new Date().toISOString().split('T')[0],
     profileModeUsed: profile.profileMode,
     claudeSummary:

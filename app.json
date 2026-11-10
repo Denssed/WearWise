@@ -10,6 +10,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.denssed.wearwise",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSCameraUsageDescription": "WearWise necesita acceso a la cámara para fotografiar tus prendas, quitarles el fondo y agregarlas a tu armario inteligente.",
         "NSPhotoLibraryUsageDescription": "WearWise necesita acceso a tu galería para subir fotos de tu ropa y organizarlas.",
@@ -43,7 +44,9 @@
         {
           "locationWhenInUsePermission": "Permite a WearWise conocer el clima local para sugerirte qué vestir esta semana."
         }
-      ]
+      ],
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import React, { useState } from 'react';
 import {
+  ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../src/context/AuthContext';
 import { useWardrobe } from '../../src/context/WardrobeContext';
 import { SOFT_TACTILE } from '../../src/theme/softTactile';
 import { ProfileMode, WeeklySchedule } from '../../src/types/wardrobe';
@@ -42,7 +45,43 @@ export default function ProfileScreen() {
     regenerateWeeklyPlan,
   } = useWardrobe();
 
+  const { user, signOut, deleteAccount } = useAuth();
   const [savedBanner, setSavedBanner] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const confirmSignOut = () => {
+    Alert.alert('Cerrar sesión', '¿Quieres cerrar la sesión en este dispositivo?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Cerrar sesión', onPress: () => void signOut() },
+    ]);
+  };
+
+  const confirmDeleteAccount = () => {
+    Alert.alert(
+      'Eliminar cuenta',
+      'Se borrarán de forma permanente tu cuenta, tus prendas, tus fotos y tus planes. Esta acción no se puede deshacer.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar definitivamente',
+          style: 'destructive',
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await deleteAccount();
+            } catch (e) {
+              Alert.alert(
+                'No se pudo eliminar',
+                e instanceof Error ? e.message : 'Inténtalo de nuevo más tarde.'
+              );
+            } finally {
+              setDeleting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const toggleArchetype = (styleName: string) => {
     const exists = profile.styleArchetypes.includes(styleName);
@@ -305,6 +344,34 @@ export default function ProfileScreen() {
               </Text>
             </View>
           ) : null}
+
+          {/* CUENTA */}
+          <View style={[styles.sectionCard, { marginTop: 22 }]}>
+            <Text style={styles.sectionHeader}>Cuenta</Text>
+            <Text style={styles.accountEmail} numberOfLines={1}>
+              {user?.email ?? 'Sesión iniciada'}
+            </Text>
+
+            <TouchableOpacity style={styles.accountBtn} onPress={confirmSignOut}>
+              <Ionicons name="log-out-outline" size={18} color={SOFT_TACTILE.colors.textPrimary} />
+              <Text style={styles.accountBtnText}>Cerrar sesión</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.accountBtn, styles.dangerBtn]}
+              onPress={confirmDeleteAccount}
+              disabled={deleting}
+            >
+              {deleting ? (
+                <ActivityIndicator color={SOFT_TACTILE.colors.clayRed} />
+              ) : (
+                <Ionicons name="trash-outline" size={18} color={SOFT_TACTILE.colors.clayRed} />
+              )}
+              <Text style={[styles.accountBtnText, { color: SOFT_TACTILE.colors.clayRed }]}>
+                Eliminar mi cuenta
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -489,6 +556,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+  },
+  accountEmail: {
+    color: SOFT_TACTILE.colors.textSecondary,
+    fontSize: 13,
+    marginTop: 4,
+    marginBottom: 6,
+  },
+  accountBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: 10,
+    paddingVertical: 13,
+    borderRadius: 18,
+    backgroundColor: SOFT_TACTILE.colors.canvas,
+    borderWidth: 1,
+    borderColor: SOFT_TACTILE.colors.border,
+  },
+  dangerBtn: {
+    backgroundColor: SOFT_TACTILE.colors.clayRedSoft,
+    borderColor: SOFT_TACTILE.colors.clayRedSoft,
+  },
+  accountBtnText: {
+    color: SOFT_TACTILE.colors.textPrimary,
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   savedToastText: {
     color: SOFT_TACTILE.colors.sage,
